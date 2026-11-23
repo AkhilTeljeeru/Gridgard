@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: gridguard_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gridguard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gridguard_secret_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-gridguard_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docs/POSTGRES_SCHEMA.sql:/docker-entrypoint-initdb.d/01_init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gridguard} -d ${POSTGRES_DB:-gridguard_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  neo4j:
+    image: neo4j:5.18-community
+    container_name: gridguard_neo4j
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: ${NEO4J_AUTH:-neo4j/gridguard_graph_2026}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4jdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  gis_backend:
+    image: python:3.12-slim
+    container_name: gridguard_gis_backend
+    working_dir: /workspace
+    restart: unless-stopped
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements.txt &&
+             alembic upgrade head &&
+             python -m app.database.seed &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-gridguard}:${POSTGRES_PASSWORD:-gridguard_secret_2026}@postgres:5432/${POSTGRES_DB:-gridguard_db}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-CHANGE_ME_IN_PRODUCTION_USE_ENV_SECRET}
+      ENABLE_DEMONSTRATION_MODE: ${ENABLE_DEMONSTRATION_MODE:-true}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/workspace
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  applet:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_MAPBOX_ACCESS_TOKEN: ${VITE_MAPBOX_ACCESS_TOKEN:-YOUR_MAPBOX_PUBLIC_ACCESS_TOKEN}
+        VITE_TELEMETRY_PROVIDER: ${VITE_TELEMETRY_PROVIDER:-simulated}
+    container_name: gridguard_app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-gridguard}:${POSTGRES_PASSWORD:-gridguard_secret_2026}@postgres:5432/${POSTGRES_DB:-gridguard_db}
+      NEO4J_URI: bolt://neo4j:7687
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-CHANGE_ME_IN_PRODUCTION_USE_ENV_SECRET}
+      ENABLE_DEMONSTRATION_MODE: ${ENABLE_DEMONSTRATION_MODE:-true}
+      VITE_MAPBOX_ACCESS_TOKEN: ${VITE_MAPBOX_ACCESS_TOKEN:-YOUR_MAPBOX_PUBLIC_ACCESS_TOKEN}
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  neo4jdata:

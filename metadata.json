@@ -1,0 +1,6 @@
+{
+  "name": "GridGuard AI",
+  "description": "Grid Operational Context & Decision Intelligence Platform for electricity distribution utilities: reconciling asset data, reconstructing event timelines, mapping topology graphs, simulating load transfers, and enforcing traceable decision governance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
