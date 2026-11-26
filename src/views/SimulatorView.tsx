@@ -8,6 +8,7 @@ import { SIMULATION_TYPE_LABELS } from '../services/simulationEngine';
 import { exportSimulationDecisionReportPdf } from '../services/simulationPdfReport';
 import { isPendingDecisionStatus } from '../services/governanceHelpers';
 import { DecisionGovernanceView } from './DecisionGovernanceView';
+import { MobileRecordCardList, MobileRecordItem } from '../components/ui/MobileRecordCard';
 import type { SimulationRiskLevel, SimulationType } from '../types/grid';
 import {
   Activity,
@@ -449,12 +450,12 @@ export const SimulatorView: React.FC = () => {
           </div>
 
           {/* Primary Sub-Workspace Switcher: Simulation Studio vs Decisions & Approvals */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/70">
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+            <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/70 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setSimulatorTab('studio')}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                className={`flex-1 sm:flex-initial min-h-[44px] lg:min-h-0 px-3 py-1.5 rounded-md text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                   simulatorTab === 'studio'
                     ? 'bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 shadow-xs font-semibold'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -466,7 +467,7 @@ export const SimulatorView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSimulatorTab('governance')}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                className={`flex-1 sm:flex-initial min-h-[44px] lg:min-h-0 px-3 py-1.5 rounded-md text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                   simulatorTab === 'governance'
                     ? 'bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 shadow-xs font-semibold'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -486,25 +487,25 @@ export const SimulatorView: React.FC = () => {
 
         {simulatorTab === 'studio' && (
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 w-full">
             {hasRegionSelection && (
               <button
                 type="button"
                 onClick={resetGeoFilter}
-                className="px-2.5 py-1.5 text-xs font-mono text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-800 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/40 transition-colors whitespace-nowrap shrink-0"
+                className="min-h-[44px] lg:min-h-0 px-2.5 py-1.5 text-xs font-mono text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-800 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/40 transition-colors whitespace-nowrap shrink-0"
               >
                 Scope: {geoScopeLabel} (Clear)
               </button>
             )}
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 w-full sm:w-auto">
               <label className="text-[11px] font-mono uppercase text-slate-500 dark:text-slate-400 whitespace-nowrap">
                 Saved Scenario:
               </label>
               <select
                 value={activeScenario?.id || ''}
                 onChange={(e) => selectSimulationScenario(e.target.value || null)}
-                className="px-2.5 py-1.5 text-xs font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 max-w-[260px]"
+                className="w-full sm:w-auto sm:max-w-[260px] min-h-[44px] lg:min-h-0 px-2.5 py-1.5 text-xs font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200"
               >
                 {scenarios.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -808,7 +809,7 @@ export const SimulatorView: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div className="space-y-1">
                 <label className="font-semibold text-slate-700 dark:text-slate-300 block">
                   Transfer Load (MVA)
@@ -820,7 +821,7 @@ export const SimulatorView: React.FC = () => {
                   step={0.1}
                   value={loadTransferMva}
                   onChange={(e) => setLoadTransferMva(Math.max(0.5, Number(e.target.value) || 0.5))}
-                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono tabular-nums text-slate-800 dark:text-slate-200"
+                  className="w-full min-h-[44px] lg:min-h-0 p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono tabular-nums text-slate-800 dark:text-slate-200"
                 />
               </div>
 
@@ -835,7 +836,7 @@ export const SimulatorView: React.FC = () => {
                   step={1}
                   value={expectedDurationMin}
                   onChange={(e) => setExpectedDurationMin(Math.max(1, Number(e.target.value) || 15))}
-                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono tabular-nums text-slate-800 dark:text-slate-200"
+                  className="w-full min-h-[44px] lg:min-h-0 p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono tabular-nums text-slate-800 dark:text-slate-200"
                 />
               </div>
             </div>
@@ -848,14 +849,14 @@ export const SimulatorView: React.FC = () => {
                 type="datetime-local"
                 value={timeOfOperation}
                 onChange={(e) => setTimeOfOperation(e.target.value)}
-                className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono text-slate-800 dark:text-slate-200"
+                className="w-full min-h-[44px] lg:min-h-0 p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono text-slate-800 dark:text-slate-200"
               />
             </div>
 
             <button
               type="button"
               onClick={handleRunSimulation}
-              className="w-full py-2.5 px-4 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer whitespace-nowrap"
+              className="w-full min-h-[44px] py-2.5 px-4 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer whitespace-nowrap"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               <span>Run Simulation</span>
@@ -867,11 +868,11 @@ export const SimulatorView: React.FC = () => {
         <div className="xl:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
           {/* Tab Strip */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2.5">
-            <div className="flex flex-wrap items-center gap-1">
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar max-w-full">
               <button
                 type="button"
                 onClick={() => setCenterTab('map')}
-                className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`min-h-[44px] lg:min-h-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                   centerTab === 'map'
                     ? 'bg-cyan-600 text-white'
                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -884,7 +885,7 @@ export const SimulatorView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setCenterTab('graph')}
-                className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`min-h-[44px] lg:min-h-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                   centerTab === 'graph'
                     ? 'bg-cyan-600 text-white'
                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -897,7 +898,7 @@ export const SimulatorView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setCenterTab('comparison')}
-                className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`min-h-[44px] lg:min-h-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                   centerTab === 'comparison'
                     ? 'bg-cyan-600 text-white'
                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -910,7 +911,7 @@ export const SimulatorView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setCenterTab('alternatives')}
-                className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`min-h-[44px] lg:min-h-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                   centerTab === 'alternatives'
                     ? 'bg-cyan-600 text-white'
                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -923,7 +924,7 @@ export const SimulatorView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setCenterTab('opendss')}
-                className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`min-h-[44px] lg:min-h-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                   centerTab === 'opendss'
                     ? 'bg-cyan-600 text-white'
                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -938,7 +939,7 @@ export const SimulatorView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSimulationOverlayPlaying((p) => !p)}
-                className="px-2.5 py-1 text-[11px] font-mono font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+                className="min-h-[44px] lg:min-h-0 px-2.5 py-1 text-[11px] font-mono font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
               >
                 {simulationOverlayPlaying ? (
                   <>
@@ -959,7 +960,7 @@ export const SimulatorView: React.FC = () => {
           {centerTab === 'map' && (
             <div className="space-y-2.5">
               <GridMapComponent
-                heightClass="h-[460px]"
+                heightClass="h-[340px] sm:h-[420px] lg:h-[460px]"
                 simulationOverlay={activeSimulationOverlay}
               />
               <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/70 rounded-lg text-[11px] text-slate-600 dark:text-slate-300">
@@ -993,7 +994,7 @@ export const SimulatorView: React.FC = () => {
           {centerTab === 'graph' && (
             <div className="space-y-2.5">
               <KnowledgeGraphCanvas
-                heightClass="h-[460px]"
+                heightClass="h-[340px] sm:h-[420px] lg:h-[460px]"
                 compactLegend
                 simulationOverlay={activeSimulationOverlay}
               />
@@ -1095,7 +1096,7 @@ export const SimulatorView: React.FC = () => {
 
               {/* Equipment Utilization Comparison Table */}
               <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-                <div className="px-3.5 py-2 bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div className="px-3.5 py-2 bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                   <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
                     Equipment Loading & Status Comparison
                   </span>
@@ -1103,7 +1104,32 @@ export const SimulatorView: React.FC = () => {
                     {activeScenario.impactAnalysis.loadRedistributionSummary}
                   </span>
                 </div>
-                <div className="overflow-x-auto max-h-[300px]">
+
+                <div className="md:hidden p-3">
+                  <MobileRecordCardList
+                    emptyText="No equipment utilization entries."
+                    detailTitle="Equipment Loading Details"
+                    onInspectAsset={(assetId) => selectAsset(assetId, 'simulator', { zoom: 15, openPopup: true })}
+                    items={activeScenario.impactAnalysis.equipmentUtilization.map((row): MobileRecordItem => ({
+                      id: `${row.assetId}-${row.role}`,
+                      assetName: `${row.assetId} (${row.role})`,
+                      assetId: row.assetId,
+                      status: row.statusAfter,
+                      statusTone:
+                        row.afterLoadPct >= 95 ? 'critical' : row.afterLoadPct >= 80 ? 'warning' : 'healthy',
+                      health: `${row.afterLoadPct}% Load`,
+                      location: row.role,
+                      lastUpdated: `${row.beforeLoadPct}% → ${row.afterLoadPct}%`,
+                      detailFields: [
+                        { label: 'Before', value: `${row.beforeLoadPct}% (${row.beforeLoadMva} MVA)` },
+                        { label: 'After', value: `${row.afterLoadPct}% (${row.afterLoadMva} MVA)` },
+                        { label: 'State Transition', value: `${row.statusBefore} → ${row.statusAfter}` }
+                      ]
+                    }))}
+                  />
+                </div>
+
+                <div className="hidden md:block overflow-x-auto max-h-[300px]">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-50 dark:bg-slate-800/40 text-[11px] font-mono uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                       <tr>
@@ -1193,7 +1219,48 @@ export const SimulatorView: React.FC = () => {
                 </div>
               )}
 
-              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto">
+              <div className="md:hidden">
+                <MobileRecordCardList
+                  emptyText="Select scenarios above to compare."
+                  detailTitle="Scenario Comparison Details"
+                  items={comparisonResult.rows.map((row): MobileRecordItem => {
+                    const isBest = row.simulationId === comparisonResult.recommendedScenarioId;
+                    return {
+                      id: row.simulationId,
+                      assetName: `${row.scenarioCode}${isBest ? ' (Recommended)' : ''}`,
+                      assetId: row.simulationId,
+                      status: row.riskLevel,
+                      statusTone:
+                        row.riskLevel === 'HIGH' ? 'critical' : row.riskLevel === 'MEDIUM' ? 'warning' : 'healthy',
+                      health: `${row.postLoadPct}% Load`,
+                      location: SIMULATION_TYPE_LABELS[row.scenarioType],
+                      lastUpdated: `${row.expectedOutageDurationMin} min window`,
+                      detailFields: [
+                        { label: 'Min Bus Voltage', value: `${row.minBusVoltagePu.toFixed(3)} p.u.` },
+                        {
+                          label: 'Outage After',
+                          value:
+                            row.consumersAffectedAfter !== null
+                              ? row.consumersAffectedAfter.toLocaleString()
+                              : 'Not available'
+                        },
+                        { label: 'Window', value: `${row.expectedOutageDurationMin} min` }
+                      ],
+                      actions: (
+                        <button
+                          type="button"
+                          onClick={() => selectSimulationScenario(row.simulationId)}
+                          className="min-h-[44px] px-3 py-2 text-xs font-semibold rounded-lg bg-cyan-600 text-white"
+                        >
+                          Load Scenario
+                        </button>
+                      )
+                    };
+                  })}
+                />
+              </div>
+
+              <div className="hidden md:block border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 dark:bg-slate-800/50 text-[11px] font-mono uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                     <tr>
@@ -1482,7 +1549,7 @@ export const SimulatorView: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleExportPdf}
-                      className="px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+                      className="min-h-[44px] lg:min-h-0 px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
                     >
                       <Download className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
                       <span>Export PDF</span>
@@ -1495,14 +1562,14 @@ export const SimulatorView: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleInlineReview('REJECT')}
-                          className="px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 rounded-lg whitespace-nowrap shrink-0 cursor-pointer"
+                          className="min-h-[44px] lg:min-h-0 px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 rounded-lg whitespace-nowrap shrink-0 cursor-pointer"
                         >
                           Reject
                         </button>
                         <button
                           type="button"
                           onClick={() => handleInlineReview('APPROVE')}
-                          className="flex-1 px-3 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+                          className="flex-1 min-h-[44px] lg:min-h-0 px-3 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
                         >
                           <ShieldCheck className="w-3.5 h-3.5" />
                           <span>Approve &amp; Dispatch</span>
@@ -1512,7 +1579,7 @@ export const SimulatorView: React.FC = () => {
                       <button
                         type="button"
                         onClick={handleInlineSubmitFromScenario}
-                        className="flex-1 min-w-[150px] px-3 py-2 text-xs font-semibold text-white bg-slate-900 dark:bg-cyan-600 hover:bg-slate-800 dark:hover:bg-cyan-500 rounded-lg transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+                        className="flex-1 min-w-[150px] min-h-[44px] lg:min-h-0 px-3 py-2 text-xs font-semibold text-white bg-slate-900 dark:bg-cyan-600 hover:bg-slate-800 dark:hover:bg-cyan-500 rounded-lg transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
                       >
                         <span>
                           {rolePermissions.canSubmitDecision

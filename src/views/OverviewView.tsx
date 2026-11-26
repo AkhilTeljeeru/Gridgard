@@ -275,7 +275,7 @@ export const OverviewView: React.FC = () => {
       ) : (
         <>
       {/* Phase 8: Live 8-KPI Operational Strip (All 8 Required Metrics) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <button
           type="button"
           onClick={() => setActiveView('map')}

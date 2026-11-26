@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useGrid } from '../context/GridContext';
 import { DataQualityIssue } from '../types/grid';
 import { SourceBadge } from '../components/ui/SourceBadge';
+import { MobileRecordCardList, MobileRecordItem } from '../components/ui/MobileRecordCard';
 import { formatMissingValue } from '../services/syntheticData';
 import {
   Database,
@@ -95,24 +96,24 @@ export const DataIntegrityView: React.FC = () => {
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden space-y-3">
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="relative">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Search canonical ID, name, or conflict..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-cyan-500 w-64"
+                className="pl-8 pr-3 py-2 lg:py-1.5 min-h-[44px] lg:min-h-0 text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-cyan-500 w-full"
               />
             </div>
 
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-xs">
-              <Filter className="w-3.5 h-3.5 text-slate-400 ml-1.5" />
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 lg:p-0.5 rounded-lg text-xs w-full sm:w-auto min-h-[44px] lg:min-h-0">
+              <Filter className="w-3.5 h-3.5 text-slate-400 ml-1.5 shrink-0" />
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="bg-transparent text-slate-700 dark:text-slate-200 pr-2 py-1 text-xs focus:outline-none cursor-pointer"
+                className="bg-transparent text-slate-700 dark:text-slate-200 pr-2 py-1 text-xs focus:outline-none cursor-pointer w-full"
               >
                 <option value="ALL">All Statuses</option>
                 <option value="DETECTED">Detected</option>
@@ -127,7 +128,76 @@ export const DataIntegrityView: React.FC = () => {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="md:hidden p-3">
+          <MobileRecordCardList
+            emptyText="No data integrity findings in the active scope."
+            detailTitle="Integrity Finding Details"
+            onInspectAsset={(assetId) => focusAssetOnMap(assetId)}
+            items={filteredIssues.map((issue): MobileRecordItem => {
+              const isResolved = issue.status === 'RESOLVED';
+              return {
+                id: issue.id,
+                assetName: formatMissingValue(issue.assetName),
+                assetId: issue.canonicalAssetId,
+                status: isResolved ? 'RESOLVED' : issue.status,
+                statusTone: isResolved
+                  ? 'healthy'
+                  : issue.severity === 'CRITICAL'
+                    ? 'critical'
+                    : 'warning',
+                health: issue.severity,
+                location: `${issue.conflictingSourceA} vs ${issue.conflictingSourceB}`,
+                lastUpdated: issue.issueType,
+                summary: issue.explanation,
+                detailFields: [
+                  { label: 'Source', value: issue.source },
+                  { label: issue.conflictingSourceA, value: formatMissingValue(issue.conflictingValueA) },
+                  { label: issue.conflictingSourceB, value: formatMissingValue(issue.conflictingValueB) },
+                  ...(issue.chosenCanonicalValue
+                    ? [{ label: 'Canonical Value', value: issue.chosenCanonicalValue }]
+                    : [])
+                ],
+                actions: (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => focusAssetOnMap(issue.canonicalAssetId)}
+                      className="min-h-[44px] px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-cyan-600 dark:text-cyan-400 inline-flex items-center gap-1"
+                    >
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>Map</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openKnowledgeGraphForAsset(issue.canonicalAssetId)}
+                      className="min-h-[44px] px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 inline-flex items-center gap-1"
+                    >
+                      <Network className="w-3.5 h-3.5" />
+                      <span>Graph</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openRootCauseForAsset(issue.canonicalAssetId)}
+                      className="min-h-[44px] px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-amber-600 dark:text-amber-400 inline-flex items-center gap-1"
+                    >
+                      <SearchCheck className="w-3.5 h-3.5" />
+                      <span>RCA</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenResolveModal(issue)}
+                      className="min-h-[44px] px-3 py-2 text-xs font-semibold rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white"
+                    >
+                      {isResolved ? 'View Audit Note' : 'Reconcile'}
+                    </button>
+                  </>
+                )
+              };
+            })}
+          />
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 font-mono border-b border-slate-200 dark:border-slate-800">
               <tr>
@@ -287,11 +357,11 @@ export const DataIntegrityView: React.FC = () => {
       </div>
 
       {selectedIssue && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-[calc(100vw-1.5rem)] sm:w-full max-h-[90dvh] overflow-y-auto p-4 sm:p-6 space-y-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex flex-wrap items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-cyan-500" />
                   <span>Reconcile Integrity Finding: {selectedIssue.canonicalAssetId}</span>
                   <SourceBadge source={selectedIssue.source} compact />
@@ -301,8 +371,10 @@ export const DataIntegrityView: React.FC = () => {
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedIssue(null)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-mono"
+                className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-mono rounded-lg"
+                aria-label="Close modal"
               >
                 ✕
               </button>
@@ -368,16 +440,18 @@ export const DataIntegrityView: React.FC = () => {
               />
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-end gap-2 sm:gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
               <button
+                type="button"
                 onClick={() => setSelectedIssue(null)}
-                className="px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                className="w-full sm:w-auto min-h-[44px] lg:min-h-0 px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleConfirmResolution}
-                className="px-4 py-2 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors shadow-sm"
+                className="w-full sm:w-auto min-h-[44px] lg:min-h-0 px-4 py-2 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors shadow-sm"
               >
                 Confirm Canonical Record
               </button>

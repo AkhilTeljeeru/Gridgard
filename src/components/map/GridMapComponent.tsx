@@ -249,6 +249,7 @@ export const GridMapComponent: React.FC<{
   showOverviewSubstationsWhenUnselected?: boolean;
   showFieldWorkforce?: boolean;
   focusEngineerNonce?: number;
+  flyToRequest?: { lat: number; lng: number; zoom?: number; nonce: number } | null;
   onSelectEngineer?: (engineer: FieldEngineer) => void;
   onSelectAsset?: (asset: InfrastructureAsset) => void;
   onSelectFault?: (fault: ActiveFault) => void;
@@ -260,6 +261,7 @@ export const GridMapComponent: React.FC<{
   onOpenFullMap,
   showFieldWorkforce = true,
   focusEngineerNonce = 0,
+  flyToRequest = null,
   onSelectEngineer,
   onSelectAsset,
   onSelectFault
@@ -325,6 +327,7 @@ export const GridMapComponent: React.FC<{
   const lastHandledNonceRef = useRef<number | null>(null);
   const lastHandledFaultNonceRef = useRef<number>(0);
   const lastHandledEngineerNonceRef = useRef<number>(0);
+  const lastHandledFlyToNonceRef = useRef<number>(0);
   const prevCameraRef = useRef<{ lat: number; lng: number; zoom: number } | null>(null);
   const onBoundsSettledRef = useRef(fetchOsmAssetsForBounds);
   onBoundsSettledRef.current = fetchOsmAssetsForBounds;
@@ -1014,6 +1017,26 @@ export const GridMapComponent: React.FC<{
       });
     }
   }, [mapCenter, mapZoom, readOnly, reconstruction]);
+
+  // External fly-to (e.g., mobile Live Location FAB)
+  useEffect(() => {
+    if (!flyToRequest || flyToRequest.nonce === lastHandledFlyToNonceRef.current) return;
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    lastHandledFlyToNonceRef.current = flyToRequest.nonce;
+    const targetZoom = flyToRequest.zoom ?? Math.max(map.getZoom(), 13);
+    prevCameraRef.current = {
+      lat: flyToRequest.lat,
+      lng: flyToRequest.lng,
+      zoom: targetZoom
+    };
+    map.flyTo({
+      center: [flyToRequest.lng, flyToRequest.lat],
+      zoom: targetZoom,
+      duration: 850,
+      essential: true
+    });
+  }, [flyToRequest]);
 
   // Bidirectional sync: Knowledge Graph or Search focusRequest -> flyTo + open popup
   useEffect(() => {
@@ -2005,7 +2028,7 @@ export const GridMapComponent: React.FC<{
               const telemetry = telemetryByAssetId[asset.canonicalId];
               const effectiveStatus = resolveEffectiveStatus(asset, telemetry);
               return (
-                <div className="font-mono text-xs p-1 space-y-2 min-w-[295px] text-slate-800">
+                <div className="font-mono text-xs p-1 space-y-2 w-[min(290px,calc(100vw-3rem))] sm:min-w-[285px] text-slate-800">
                   <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 gap-2">
                     <div className="flex items-center gap-1.5">
                       <SourceBadge source={asset.source} compact />
@@ -2216,7 +2239,7 @@ export const GridMapComponent: React.FC<{
                   ? fault.affectedTransformerIds.join(', ')
                   : formatMissingValue(fault.affectedTransformerId);
               return (
-                <div className="font-mono text-xs p-1 space-y-2 min-w-[280px] text-slate-800">
+                <div className="font-mono text-xs p-1 space-y-2 w-[min(280px,calc(100vw-3rem))] sm:min-w-[280px] text-slate-800">
                   <div className="flex items-center justify-between border-b border-rose-200 pb-1 gap-2">
                     <span className="font-bold text-rose-600">{fault.faultCode}</span>
                     <div className="flex items-center gap-1">
@@ -2296,7 +2319,7 @@ export const GridMapComponent: React.FC<{
             {(() => {
               const line = activePopup.line;
               return (
-                <div className="font-mono text-xs p-1 space-y-2 min-w-[250px] text-slate-800">
+                <div className="font-mono text-xs p-1 space-y-2 w-[min(250px,calc(100vw-3rem))] sm:min-w-[250px] text-slate-800">
                   <div className="flex items-center justify-between border-b border-slate-200 pb-1 gap-2">
                     <SourceBadge source={line.source} compact />
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">
@@ -2353,7 +2376,7 @@ export const GridMapComponent: React.FC<{
             closeOnClick={false}
             onClose={() => setActivePopup(null)}
           >
-            <div className="font-mono text-xs p-1 space-y-1.5 text-slate-800 min-w-[230px]">
+            <div className="font-mono text-xs p-1 space-y-1.5 text-slate-800 w-[min(230px,calc(100vw-3rem))] sm:min-w-[230px]">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-bold text-amber-700">
                   {activePopup.zone.workOrderNumber}
@@ -2379,7 +2402,7 @@ export const GridMapComponent: React.FC<{
             closeOnClick={false}
             onClose={() => setActivePopup(null)}
           >
-            <div className="font-mono text-xs p-1 space-y-1.5 min-w-[230px] text-slate-800">
+            <div className="font-mono text-xs p-1 space-y-1.5 w-[min(230px,calc(100vw-3rem))] sm:min-w-[230px] text-slate-800">
               <div className="flex items-center justify-between gap-2">
                 <SourceBadge source={activePopup.asset.source} compact />
                 <span className="font-bold text-amber-700 text-[11px]">Data Integrity Flag</span>
@@ -2446,7 +2469,7 @@ export const GridMapComponent: React.FC<{
                 ? fieldTasks.find((t) => t.id === eng.currentTaskId)
                 : null;
               return (
-                <div className="font-mono text-xs p-1 space-y-2 min-w-[270px] text-slate-800">
+                <div className="font-mono text-xs p-1 space-y-2 w-[min(270px,calc(100vw-3rem))] sm:min-w-[270px] text-slate-800">
                   <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 gap-2">
                     <span className="font-bold text-cyan-700">{eng.employeeId}</span>
                     <span

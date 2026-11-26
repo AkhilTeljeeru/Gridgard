@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useGrid } from '../context/GridContext';
 import { AuditLogsView } from './AuditLogsView';
+import { MobileRecordCardList, MobileRecordItem } from '../components/ui/MobileRecordCard';
 import type { UserRole } from '../types/grid';
 import {
   BellRing,
@@ -165,7 +166,7 @@ export const SystemAdminView: React.FC = () => {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-1.5 flex-wrap border-b border-slate-200 dark:border-slate-800 pb-3">
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-slate-200 dark:border-slate-800 pb-3">
         {(
           [
             { id: 'users', label: 'User & Role Management', icon: Users },
@@ -182,7 +183,7 @@ export const SystemAdminView: React.FC = () => {
               key={item.id}
               type="button"
               onClick={() => setTab(item.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`min-h-[44px] lg:min-h-0 px-3 py-2 lg:py-1.5 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
                 active
                   ? 'bg-cyan-600 text-white'
                   : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800'
@@ -202,7 +203,56 @@ export const SystemAdminView: React.FC = () => {
             <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white">
               Registered Utility Operators ({adminUsers.length})
             </div>
-            <div className="overflow-x-auto">
+
+            <div className="md:hidden p-3">
+              <MobileRecordCardList
+                emptyText="No utility operators registered."
+                detailTitle="Operator RBAC Details"
+                items={adminUsers.map((u): MobileRecordItem => ({
+                  id: u.id,
+                  assetName: u.fullName,
+                  assetId: u.email,
+                  status: u.status,
+                  statusTone: u.status === 'ACTIVE' ? 'healthy' : 'critical',
+                  health: u.role,
+                  location: 'GridGuard RBAC',
+                  lastUpdated: u.username,
+                  detailFields: [
+                    { label: 'Username', value: u.username },
+                    { label: 'RBAC Role', value: u.role },
+                    { label: 'Status', value: u.status }
+                  ],
+                  actions: (
+                    <div className="flex flex-wrap items-center gap-2 w-full" onClick={(e) => e.stopPropagation()}>
+                      <select
+                        disabled={!isAdmin}
+                        value={u.role}
+                        onChange={(e) => updateAdminUser(u.id, { role: e.target.value as UserRole })}
+                        className="flex-1 min-h-[44px] px-2.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-xs disabled:opacity-60"
+                      >
+                        <option value="ADMIN">ADMIN</option>
+                        <option value="GRID_ENGINEER">GRID_ENGINEER</option>
+                        <option value="REVIEWER_APPROVER">REVIEWER_APPROVER</option>
+                        <option value="FIELD_ENGINEER">FIELD_ENGINEER</option>
+                        <option value="VIEWER">VIEWER</option>
+                      </select>
+                      <button
+                        type="button"
+                        disabled={!isAdmin}
+                        onClick={() =>
+                          updateAdminUser(u.id, { status: u.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE' })
+                        }
+                        className="min-h-[44px] px-3 py-2 text-xs font-semibold rounded-lg bg-cyan-600 text-white disabled:opacity-40"
+                      >
+                        {u.status === 'ACTIVE' ? 'Suspend' : 'Activate'}
+                      </button>
+                    </div>
+                  )
+                }))}
+              />
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 dark:bg-slate-800/40 text-slate-500 font-mono border-b border-slate-200 dark:border-slate-800">
                   <tr>
@@ -270,7 +320,7 @@ export const SystemAdminView: React.FC = () => {
               value={newUserName}
               onChange={(e) => setNewUserName(e.target.value)}
               placeholder="Full Name"
-              className="w-full px-3 py-2 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+              className="w-full min-h-[44px] lg:min-h-0 px-3 py-2 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
             />
             <input
               type="email"
@@ -278,12 +328,12 @@ export const SystemAdminView: React.FC = () => {
               value={newUserEmail}
               onChange={(e) => setNewUserEmail(e.target.value)}
               placeholder="operator@utilitygrid.org"
-              className="w-full px-3 py-2 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+              className="w-full min-h-[44px] lg:min-h-0 px-3 py-2 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
             />
             <select
               value={newUserRole}
               onChange={(e) => setNewUserRole(e.target.value as UserRole)}
-              className="w-full px-3 py-2 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono"
+              className="w-full min-h-[44px] lg:min-h-0 px-3 py-2 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono"
             >
               <option value="GRID_ENGINEER">GRID_ENGINEER (Control Room)</option>
               <option value="REVIEWER_APPROVER">REVIEWER_APPROVER (Manager)</option>
@@ -294,7 +344,7 @@ export const SystemAdminView: React.FC = () => {
             <button
               type="submit"
               disabled={!isAdmin}
-              className="w-full py-2 text-xs font-semibold bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 cursor-pointer"
+              className="w-full min-h-[44px] lg:min-h-0 py-2 text-xs font-semibold bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 cursor-pointer"
             >
               Add Operator Account
             </button>
@@ -332,7 +382,7 @@ export const SystemAdminView: React.FC = () => {
               <Layers className="w-4 h-4 text-cyan-500" />
               <span>GIS Map Layer Controls</span>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               {(Object.keys(mapLayers) as Array<keyof typeof mapLayers>).map((layerKey) => (
                 <label
                   key={layerKey}

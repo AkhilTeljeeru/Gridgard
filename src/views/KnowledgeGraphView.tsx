@@ -5,6 +5,7 @@ import { GridMapComponent } from '../components/map/GridMapComponent';
 import { SourceBadge } from '../components/ui/SourceBadge';
 import { AssetHealthGauge } from '../components/ai/AssetHealthGauge';
 import { AssetAiTimelinePanel } from '../components/ai/AssetAiTimelinePanel';
+import { ResponsiveDrawer } from '../components/ui/ResponsiveDrawer';
 import { formatMissingValue } from '../services/syntheticData';
 import { formatAssetGeographicLocation } from '../services/intelligenceService';
 import { traceDigitalTwinDependencies } from '../services/digitalTwinEngine';
@@ -21,7 +22,8 @@ import {
   Cpu,
   SearchCheck,
   FileCheck2,
-  Wrench
+  Wrench,
+  PanelBottomOpen
 } from 'lucide-react';
 
 export const KnowledgeGraphView: React.FC = () => {
@@ -55,6 +57,14 @@ export const KnowledgeGraphView: React.FC = () => {
   const [showCypherCode, setShowCypherCode] = useState<boolean>(false);
   const [splitMapOpen, setSplitMapOpen] = useState<boolean>(false);
   const [inspectedGraphNode, setInspectedGraphNode] = useState<GraphNodeData | null>(null);
+  const [mobileInspectorOpen, setMobileInspectorOpen] = useState<boolean>(false);
+
+  const handleSelectNodeInspector = (node: GraphNodeData | null) => {
+    setInspectedGraphNode(node);
+    if (node && typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setMobileInspectorOpen(true);
+    }
+  };
 
   const selectedAsset = useMemo(() => {
     const pool = scopedAssets.length > 0 ? scopedAssets : assets;
@@ -123,7 +133,7 @@ export const KnowledgeGraphView: React.FC = () => {
             <button
               type="button"
               onClick={resetGeoFilter}
-              className="px-2.5 py-1.5 text-[11px] font-mono text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 rounded-lg hover:bg-cyan-500/20 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              className="min-h-[44px] lg:min-h-0 px-2.5 py-1.5 text-[11px] font-mono text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 rounded-lg hover:bg-cyan-500/20 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
             >
               Scope: {geoScopeLabel} (Clear)
             </button>
@@ -131,7 +141,7 @@ export const KnowledgeGraphView: React.FC = () => {
           <button
             type="button"
             onClick={() => setSplitMapOpen((prev) => !prev)}
-            className={`px-3 py-1.5 text-xs font-mono font-semibold rounded-lg border transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
+            className={`min-h-[44px] lg:min-h-0 px-3 py-1.5 text-xs font-mono font-semibold rounded-lg border transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
               splitMapOpen
                 ? 'bg-cyan-600 text-white border-cyan-500'
                 : 'text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700'
@@ -143,17 +153,25 @@ export const KnowledgeGraphView: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowCypherCode(!showCypherCode)}
-            className="px-3 py-1.5 text-xs font-mono font-medium text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+            className="min-h-[44px] lg:min-h-0 px-3 py-1.5 text-xs font-mono font-medium text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
           >
             <Code className="w-3.5 h-3.5" />
             <span>{showCypherCode ? 'Hide Cypher Query' : 'View Canonical Cypher'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileInspectorOpen(true)}
+            className="lg:hidden min-h-[44px] px-3 py-1.5 text-xs font-mono font-semibold text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+          >
+            <PanelBottomOpen className="w-3.5 h-3.5" />
+            <span>Node Details</span>
           </button>
         </div>
       </div>
 
       {showCypherCode && (
         <div className="p-4 bg-slate-900 text-slate-200 rounded-xl border border-slate-800 font-mono text-xs space-y-2">
-          <div className="text-slate-400 flex items-center justify-between">
+          <div className="text-slate-400 flex items-center justify-between gap-2 flex-wrap">
             <span>CANONICAL NEO4J CYPHER QUERY (docs/NEO4J_GRAPH_MODEL.cypher):</span>
             <span className="text-[10px] text-cyan-400">7-TIER HIERARCHY · SINGLE CANONICAL ID</span>
           </div>
@@ -167,9 +185,9 @@ RETURN st.name, d.name, s.id, f.id, t.id, sw.id, c.id;`}
 
       {/* Main Graph Viewport */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 relative">
           {assets.length === 0 ? (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl h-[540px] flex flex-col items-center justify-center p-6 text-center space-y-3">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl h-[calc(100dvh-12rem)] min-h-[420px] lg:h-[540px] flex flex-col items-center justify-center p-6 text-center space-y-3">
               <Network className="w-10 h-10 text-slate-300 dark:text-slate-700" />
               <div className="space-y-1 max-w-md">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -182,29 +200,39 @@ RETURN st.name, d.name, s.id, f.id, t.id, sw.id, c.id;`}
               <button
                 type="button"
                 onClick={() => setActiveView('map')}
-                className="px-3.5 py-2 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors"
+                className="min-h-[44px] px-4 py-2 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors"
               >
                 Open Grid Map
               </button>
             </div>
           ) : splitMapOpen ? (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 h-[540px]">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 lg:h-[540px]">
               <KnowledgeGraphCanvas
-                heightClass="h-full min-h-[400px]"
-                onSelectGraphNodeInspector={setInspectedGraphNode}
+                heightClass="h-[380px] sm:h-[440px] lg:h-full min-h-[380px]"
+                onSelectGraphNodeInspector={handleSelectNodeInspector}
               />
-              <GridMapComponent heightClass="h-full min-h-[400px]" />
+              <GridMapComponent heightClass="h-[380px] sm:h-[440px] lg:h-full min-h-[380px]" />
             </div>
           ) : (
             <KnowledgeGraphCanvas
-              heightClass="h-[540px]"
-              onSelectGraphNodeInspector={setInspectedGraphNode}
+              heightClass="h-[calc(100dvh-12.5rem)] min-h-[460px] lg:h-[540px]"
+              onSelectGraphNodeInspector={handleSelectNodeInspector}
             />
           )}
+
+          {/* Mobile/Tablet Floating Node Details Pill */}
+          <button
+            type="button"
+            onClick={() => setMobileInspectorOpen(true)}
+            className="lg:hidden fixed bottom-5 right-4 z-30 min-h-[44px] px-4 py-2.5 rounded-full bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-semibold shadow-xl border border-cyan-400/50 inline-flex items-center gap-2 cursor-pointer"
+          >
+            <Zap className="w-4 h-4" />
+            <span>{displayId !== 'Not available' ? `Inspect: ${displayId}` : 'Node Details'}</span>
+          </button>
         </div>
 
-        {/* Selected Node Details & Intelligence Inspector */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+        {/* Desktop Right Panel: Selected Node Details & Intelligence Inspector */}
+        <div className="hidden lg:block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
           <div className="border-b border-slate-200 dark:border-slate-800 pb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider font-mono text-slate-400">
               Graph Node &amp; RCA Inspector
@@ -574,6 +602,127 @@ RETURN st.name, d.name, s.id, f.id, t.id, sw.id, c.id;`}
           )}
         </div>
       </div>
+
+      {/* Mobile / Tablet Bottom Sheet Node & RCA Inspector */}
+      <ResponsiveDrawer
+        open={mobileInspectorOpen}
+        onClose={() => setMobileInspectorOpen(false)}
+        title={displayId !== 'Not available' ? `Node: ${displayId}` : 'Graph Node Inspector'}
+        subtitle={`${displayType} · ${displayLocation}`}
+        variant="bottom"
+      >
+        {selectedAsset || inspectedGraphNode ? (
+          <div className="space-y-4 text-xs">
+            <div className="flex items-center justify-between gap-2">
+              <SourceBadge source={displaySource} />
+              <span
+                className={`font-mono font-bold px-2 py-0.5 rounded ${
+                  displayStatus === 'FAULTED'
+                    ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                    : displayStatus === 'WARNING'
+                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                      : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                }`}
+              >
+                {displayStatus}
+              </span>
+            </div>
+
+            <div>
+              <div className="font-bold text-sm text-slate-900 dark:text-white">{displayName}</div>
+              <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                Voltage: {displayVoltage} · {displayLocation}
+              </div>
+            </div>
+
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-1.5">
+              <div className="flex items-center justify-between text-[10px] font-mono uppercase text-cyan-600 dark:text-cyan-400 font-bold">
+                <span className="flex items-center gap-1">
+                  <SearchCheck className="w-3.5 h-3.5" />
+                  <span>Root Cause Intelligence</span>
+                </span>
+                <span>{activeRootCauseAnalysis.confidencePct}% Conf.</span>
+              </div>
+              <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed">
+                {activeRootCauseAnalysis.rootCauseSummary}
+              </p>
+            </div>
+
+            {selectedTelemetry && (
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-1 font-mono text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-sans">Live Load:</span>
+                  <span className="font-bold text-slate-900 dark:text-white tabular-nums">
+                    {selectedTelemetry.loadKw !== null
+                      ? `${selectedTelemetry.loadKw.toLocaleString()} kW`
+                      : 'Not available'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-sans">Measured Voltage:</span>
+                  <span>{formatMissingValue(selectedTelemetry.voltage)}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              {selectedAsset && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileInspectorOpen(false);
+                    focusAssetOnMap(selectedAsset.canonicalId);
+                  }}
+                  className="min-h-[44px] py-2 px-3 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <MapPin className="w-4 h-4" />
+                  <span>Open on Grid Map</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileInspectorOpen(false);
+                  openRootCauseForAsset(selectedAsset?.canonicalId);
+                }}
+                className="min-h-[44px] py-2 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Clock className="w-4 h-4 text-cyan-500" />
+                <span>Timeline &amp; RCA</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileInspectorOpen(false);
+                  launchSimulationFromRca();
+                }}
+                className="min-h-[44px] py-2 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Cpu className="w-4 h-4 text-cyan-500" />
+                <span>What-If Sim</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileInspectorOpen(false);
+                  openFieldTaskForAsset(selectedAsset?.canonicalId || displayId);
+                }}
+                className="min-h-[44px] py-2 px-3 text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Wrench className="w-4 h-4" />
+                <span>Open Field Task</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="py-8 text-center text-slate-500 dark:text-slate-400 space-y-2">
+            <Zap className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-700" />
+            <p className="text-xs">
+              Tap any State, District, Substation, Feeder, Transformer, Switch, or Cluster node on the graph to inspect details.
+            </p>
+          </div>
+        )}
+      </ResponsiveDrawer>
     </div>
   );
 };

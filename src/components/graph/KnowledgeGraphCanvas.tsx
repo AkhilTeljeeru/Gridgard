@@ -226,6 +226,9 @@ export const KnowledgeGraphCanvas: React.FC<KnowledgeGraphCanvasProps> = ({
 
     const cy = cytoscape({
       container: containerRef.current,
+      userZoomingEnabled: true,
+      userPanningEnabled: true,
+      boxSelectionEnabled: false,
       elements: [...graphElements.nodes, ...graphElements.edges],
       style: [
         {
@@ -543,8 +546,14 @@ export const KnowledgeGraphCanvas: React.FC<KnowledgeGraphCanvasProps> = ({
 
     cyRef.current = cy;
 
-    const resizeObserver = new ResizeObserver(() => {
+    let lastWidth = containerRef.current.clientWidth;
+    const resizeObserver = new ResizeObserver((entries) => {
       cy.resize();
+      const nextWidth = entries[0]?.contentRect.width ?? containerRef.current?.clientWidth ?? lastWidth;
+      if (Math.abs(nextWidth - lastWidth) > 24) {
+        lastWidth = nextWidth;
+        cy.fit(undefined, 28);
+      }
     });
     resizeObserver.observe(containerRef.current);
 
@@ -660,12 +669,12 @@ export const KnowledgeGraphCanvas: React.FC<KnowledgeGraphCanvasProps> = ({
       className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl relative overflow-hidden ${heightClass}`}
     >
       {/* Top-Right Graph Controls */}
-      <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+      <div className="absolute top-3 right-3 z-10 flex flex-wrap items-center justify-end gap-1.5 max-w-[calc(100%-1.5rem)]">
         <button
           type="button"
           onClick={() => setIncludeFieldWorkforce((prev) => !prev)}
           title="Toggle Field Engineer -> Incident -> Asset -> Historical Incidents chain"
-          className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-mono font-medium flex items-center gap-1.5 backdrop-blur shadow-sm cursor-pointer transition-colors ${
+          className={`min-h-[44px] lg:min-h-0 px-2.5 py-1.5 rounded-lg border text-[11px] font-mono font-medium flex items-center gap-1.5 backdrop-blur shadow-sm cursor-pointer transition-colors ${
             includeFieldWorkforce
               ? 'bg-sky-600 text-white border-sky-500'
               : 'bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700'
@@ -678,14 +687,19 @@ export const KnowledgeGraphCanvas: React.FC<KnowledgeGraphCanvasProps> = ({
           type="button"
           onClick={() => setIncludeGeoAndConsumerTiers((prev) => !prev)}
           title="Toggle 7-Tier Hierarchy (State -> District -> ... -> Consumer Cluster)"
-          className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-mono font-medium flex items-center gap-1.5 backdrop-blur shadow-sm cursor-pointer transition-colors ${
+          className={`min-h-[44px] lg:min-h-0 px-2.5 py-1.5 rounded-lg border text-[11px] font-mono font-medium flex items-center gap-1.5 backdrop-blur shadow-sm cursor-pointer transition-colors ${
             includeGeoAndConsumerTiers
               ? 'bg-cyan-600 text-white border-cyan-500'
               : 'bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700'
           }`}
         >
           <Layers className="w-3.5 h-3.5" />
-          <span>{includeGeoAndConsumerTiers ? '7-Tier Hierarchy' : 'Electrical Only'}</span>
+          <span className="hidden sm:inline">
+            {includeGeoAndConsumerTiers ? '7-Tier Hierarchy' : 'Electrical Only'}
+          </span>
+          <span className="sm:hidden">
+            {includeGeoAndConsumerTiers ? '7-Tier' : 'Elec'}
+          </span>
         </button>
 
         <div className="flex items-center gap-1 bg-white/90 dark:bg-slate-800/90 backdrop-blur p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
@@ -693,7 +707,8 @@ export const KnowledgeGraphCanvas: React.FC<KnowledgeGraphCanvasProps> = ({
             type="button"
             onClick={handleZoomIn}
             title="Zoom In"
-            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 cursor-pointer"
+            aria-label="Zoom in knowledge graph"
+            className="min-h-[44px] min-w-[44px] lg:min-h-0 lg:min-w-0 p-1.5 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 cursor-pointer"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
@@ -701,7 +716,8 @@ export const KnowledgeGraphCanvas: React.FC<KnowledgeGraphCanvasProps> = ({
             type="button"
             onClick={handleZoomOut}
             title="Zoom Out"
-            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 cursor-pointer"
+            aria-label="Zoom out knowledge graph"
+            className="min-h-[44px] min-w-[44px] lg:min-h-0 lg:min-w-0 p-1.5 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 cursor-pointer"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
@@ -709,7 +725,8 @@ export const KnowledgeGraphCanvas: React.FC<KnowledgeGraphCanvasProps> = ({
             type="button"
             onClick={handleFit}
             title="Fit Topology"
-            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 cursor-pointer"
+            aria-label="Fit knowledge graph to screen"
+            className="min-h-[44px] min-w-[44px] lg:min-h-0 lg:min-w-0 p-1.5 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 cursor-pointer"
           >
             <Maximize2 className="w-4 h-4" />
           </button>
@@ -719,9 +736,12 @@ export const KnowledgeGraphCanvas: React.FC<KnowledgeGraphCanvasProps> = ({
       {/* Hover Node Tooltip with all 6 required attributes + Source Badge */}
       {hoveredTooltip && (
         <div
-          className="pointer-events-none absolute z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-slate-300 dark:border-slate-700 rounded-lg shadow-xl p-3 text-[11px] font-mono space-y-1.5 min-w-[250px] max-w-[300px]"
+          className="pointer-events-none absolute z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-slate-300 dark:border-slate-700 rounded-lg shadow-xl p-3 text-[11px] font-mono space-y-1.5 w-[min(270px,calc(100vw-2.5rem))] sm:min-w-[250px] sm:max-w-[300px]"
           style={{
-            left: Math.min(Math.max(12, hoveredTooltip.x + 16), 340),
+            left: Math.min(
+              Math.max(12, hoveredTooltip.x + 16),
+              Math.max(12, (containerRef.current?.clientWidth || 320) - 270)
+            ),
             top: Math.max(12, hoveredTooltip.y - 24)
           }}
         >
@@ -809,7 +829,7 @@ export const KnowledgeGraphCanvas: React.FC<KnowledgeGraphCanvasProps> = ({
         </div>
       )}
 
-      <div ref={containerRef} className="w-full h-full" />
+      <div ref={containerRef} className="w-full h-full touch-none" />
     </div>
   );
 };

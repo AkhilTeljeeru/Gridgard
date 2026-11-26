@@ -4,6 +4,7 @@ import { GridMapComponent } from '../components/map/GridMapComponent';
 import { KnowledgeGraphCanvas } from '../components/graph/KnowledgeGraphCanvas';
 import { SourceBadge } from '../components/ui/SourceBadge';
 import { AssetHealthGauge } from '../components/ai/AssetHealthGauge';
+import { ResponsiveDrawer } from '../components/ui/ResponsiveDrawer';
 import { formatMissingValue } from '../services/syntheticData';
 import type {
   GeographicFilterState,
@@ -38,9 +39,12 @@ import {
   Globe,
   Layers,
   Loader2,
+  LocateFixed,
   MapPin,
   Navigation,
   Network,
+  PanelLeft,
+  PanelRight,
   RotateCcw,
   Search,
   ShieldAlert,
@@ -117,6 +121,17 @@ export const GridMapView: React.FC = () => {
   const [apiSearchResults, setApiSearchResults] = useState<GeographicSearchResult[] | null>(null);
   const [maintenanceBanner, setMaintenanceBanner] = useState<string | null>(null);
   const [highlightMaintPanel, setHighlightMaintPanel] = useState<boolean>(false);
+  const [mobileSheet, setMobileSheet] = useState<'search' | 'layers' | 'inspector' | null>(null);
+  const [tabletLeftOpen, setTabletLeftOpen] = useState<boolean>(false);
+  const [tabletRightOpen, setTabletRightOpen] = useState<boolean>(false);
+  const [flyToRequest, setFlyToRequest] = useState<{
+    lat: number;
+    lng: number;
+    zoom?: number;
+    nonce: number;
+  } | null>(null);
+  const [locatingGps, setLocatingGps] = useState<boolean>(false);
+  const [locationBanner, setLocationBanner] = useState<string | null>(null);
 
   const countryOptions = useMemo(() => getCountries(assets), [assets]);
   const stateOptions = useMemo(() => getStates(assets, geoFilter), [assets, geoFilter]);
@@ -256,6 +271,53 @@ export const GridMapView: React.FC = () => {
     applySearchResult(res);
     setSearchQuery('');
     setApiSearchResults(null);
+    setMobileSheet(null);
+    setTabletLeftOpen(false);
+  };
+
+  const handleLiveLocation = () => {
+    const fallbackToNearestAsset = (reason: string) => {
+      const target = activeAsset || scopedAssets[0] || assets[0];
+      if (target) {
+        setFlyToRequest({
+          lat: target.latitude,
+          lng: target.longitude,
+          zoom: 14,
+          nonce: Date.now()
+        });
+        setLocationBanner(`${reason} Centered on nearest grid hub (${target.canonicalId}).`);
+      } else {
+        setLocationBanner(reason);
+      }
+      window.setTimeout(() => setLocationBanner(null), 5000);
+    };
+
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      fallbackToNearestAsset('Browser geolocation unavailable.');
+      return;
+    }
+
+    setLocatingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocatingGps(false);
+        setFlyToRequest({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          zoom: 13.5,
+          nonce: Date.now()
+        });
+        setLocationBanner(
+          `Centered on live GPS (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}).`
+        );
+        window.setTimeout(() => setLocationBanner(null), 5000);
+      },
+      () => {
+        setLocatingGps(false);
+        fallbackToNearestAsset('GPS permission unavailable.');
+      },
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 30000 }
+    );
   };
 
   const handleToggleLayer = (key: keyof MapFilterLayers) => {
@@ -303,7 +365,7 @@ export const GridMapView: React.FC = () => {
         value={value}
         disabled={disabled}
         onChange={(e) => updateGeoFilterLevel(key, e.target.value)}
-        className="w-full px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-45 disabled:cursor-not-allowed"
+        className="w-full min-h-[44px] lg:min-h-0 px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-45 disabled:cursor-not-allowed"
       >
         <option value="">{placeholder}</option>
         {options.map((opt) => {
@@ -321,27 +383,227 @@ export const GridMapView: React.FC = () => {
 
   const unresolvedIssues = scopedIssues.filter((i) => i.status !== 'RESOLVED');
 
+  const renderSearchPanel = () => (
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-2 relative">
+      <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+        <Search className="w-3.5 h-3.5 text-cyan-500" />
+        <span>Asset &amp; Location Search</span>
+      </div>
+      <div className="relative">
+        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+        <input
+          type="text"
+          placeholder="State, district, area, pincode, landmark, ID..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && searchResults.length > 0) {
+              handleSelectSearch(searchResults[0]);
+            }
+          }}
+          className="w-full min-h-[44px] lg:min-h-0 pl-8 pr-8 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            aria-label="Clear search"
+            onClick={() => setSearchQuery('')}
+            className="absolute right-2 top-1/2 -translate-y-1/2 min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      {searchQuery.trim() && (
+        <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto bg-white dark:bg-slate-900">
+          {searchResults.length > 0 ? (
+            searchResults.map((res) => (
+              <button
+                type="button"
+                key={res.id}
+                onClick={() => handleSelectSearch(res)}
+                className="w-full min-h-[44px] text-left p-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between gap-2 transition-colors cursor-pointer"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    {res.asset && <SourceBadge source={res.asset.source} compact />}
+                    <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                      {res.label}
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                    {res.sublabel}
+                  </div>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              </button>
+            ))
+          ) : (
+            <div className="p-2.5 text-xs text-slate-500 dark:text-slate-400">
+              No matching regions, pincodes, or canonical assets found.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderFiltersAndLayers = () => (
+    <div className="space-y-4">
+      {/* Cascading Geographic Filters */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+        <div className="px-3.5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((prev) => !prev)}
+            className="min-h-[36px] flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 cursor-pointer"
+          >
+            <Filter className="w-3.5 h-3.5 text-cyan-500" />
+            <span>Geographic Filters</span>
+            {filtersOpen ? (
+              <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+            )}
+          </button>
+
+          {hasRegionSelection && (
+            <button
+              type="button"
+              onClick={resetGeoFilter}
+              className="text-[11px] font-mono text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset</span>
+            </button>
+          )}
+        </div>
+
+        {filtersOpen && (
+          <div className="p-3.5 space-y-2.5">
+            {renderSelect('Country', 'country', geoFilter.country, countryOptions, false, 'Select Country')}
+            {renderSelect(
+              'State / Union Territory',
+              'state',
+              geoFilter.state,
+              stateOptions,
+              !geoFilter.country,
+              `All States & UTs (${stateOptions.length} Available)`
+            )}
+            {renderSelect('District', 'district', geoFilter.district, districtOptions, !geoFilter.state, 'Select District...')}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {renderSelect('Division', 'division', geoFilter.division, divisionOptions, divisionOptions.length === 0, 'All Divisions')}
+              {renderSelect('Subdivision', 'subdivision', geoFilter.subdivision, subdivisionOptions, subdivisionOptions.length === 0, 'All Subdivisions')}
+            </div>
+            {renderSelect('City / Town', 'city', geoFilter.city, cityOptions, cityOptions.length === 0, 'All Cities / Towns')}
+            {renderSelect('Area / Locality', 'area', geoFilter.area, areaOptions, areaOptions.length === 0, 'All Areas / Localities')}
+
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+              {renderSelect('Substation', 'substationId', geoFilter.substationId, substationOptions, substationOptions.length === 0, `All Substations (${substationOptions.length})`)}
+              {renderSelect('Feeder', 'feederId', geoFilter.feederId, feederOptions, feederOptions.length === 0, `All Feeders (${feederOptions.length})`)}
+              {renderSelect('Transformer', 'transformerId', geoFilter.transformerId, transformerOptions, transformerOptions.length === 0, `All Transformers (${transformerOptions.length})`)}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Layer Controls */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+        <div className="px-3.5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setLayersOpen((prev) => !prev)}
+            className="min-h-[36px] flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 cursor-pointer"
+          >
+            <Layers className="w-3.5 h-3.5 text-cyan-500" />
+            <span>Layer Controls</span>
+            {layersOpen ? (
+              <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+            )}
+          </button>
+          <span className="text-[10px] font-mono text-slate-400">
+            {LAYER_TOGGLES.filter((l) => mapLayers[l.key]).length}/{LAYER_TOGGLES.length} Active
+          </span>
+        </div>
+
+        {layersOpen && (
+          <div className="p-3.5 space-y-2.5">
+            {LAYER_TOGGLES.map((item) => {
+              const enabled = Boolean(mapLayers[item.key]);
+              return (
+                <div key={item.key} className="flex items-center justify-between gap-2 text-xs min-h-[32px]">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${item.colorClass}`} />
+                    <span className="text-slate-700 dark:text-slate-300 truncate">{item.label}</span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={enabled}
+                    aria-label={`Toggle ${item.label}`}
+                    onClick={() => handleToggleLayer(item.key)}
+                    className={`relative inline-flex h-6 w-11 lg:h-5 lg:w-9 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                      enabled ? 'bg-cyan-600' : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 lg:h-3.5 lg:w-3.5 transform rounded-full bg-white transition-transform ${
+                        enabled ? 'translate-x-6 lg:translate-x-4.5' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="space-y-4 max-w-[1600px] mx-auto">
+    <div className="space-y-3 sm:space-y-4 max-w-[1600px] mx-auto">
       {/* View Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+            <MapPin className="w-5 h-5 text-cyan-600 dark:text-cyan-400 shrink-0" />
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
               Grid Geographic Intelligence
             </h2>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="hidden sm:block text-xs text-slate-500 dark:text-slate-400">
             Interactive Mapbox GL network workspace with cascading regional filters, clustering, and Knowledge Graph sync.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          {/* Tablet Collapsible Sidebar Toggles (md to <lg) */}
+          <button
+            type="button"
+            onClick={() => setTabletLeftOpen(true)}
+            className="hidden md:inline-flex lg:hidden min-h-[44px] px-3 py-1.5 text-xs font-mono font-semibold rounded-lg border bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 items-center gap-1.5 cursor-pointer"
+          >
+            <PanelLeft className="w-4 h-4 text-cyan-500" />
+            <span>Filters &amp; Layers</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTabletRightOpen(true)}
+            className="hidden md:inline-flex lg:hidden min-h-[44px] px-3 py-1.5 text-xs font-mono font-semibold rounded-lg border bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 items-center gap-1.5 cursor-pointer"
+          >
+            <PanelRight className="w-4 h-4 text-cyan-500" />
+            <span>Inspector</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setSplitSyncOpen((prev) => !prev)}
-            className={`px-2.5 py-1.5 text-xs font-mono font-semibold rounded-lg border transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer ${
+            className={`min-h-[44px] lg:min-h-0 px-2.5 py-1.5 text-xs font-mono font-semibold rounded-lg border transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer ${
               splitSyncOpen
                 ? 'bg-cyan-600 text-white border-cyan-500'
                 : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -351,13 +613,13 @@ export const GridMapView: React.FC = () => {
             <span>{splitSyncOpen ? 'Hide Split Sync' : 'Split Sync: Map + Graph'}</span>
           </button>
 
-          <span className="text-xs font-mono text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-lg truncate max-w-[280px]">
+          <span className="hidden md:inline-block text-xs font-mono text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-lg truncate max-w-[260px]">
             {geoScopeLabel}
           </span>
           <button
             type="button"
             onClick={resetGeoFilter}
-            className="px-2.5 py-1.5 text-xs font-mono font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer"
+            className="hidden sm:flex min-h-[44px] lg:min-h-0 px-2.5 py-1.5 text-xs font-mono font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer"
           >
             <Globe className="w-3.5 h-3.5 text-cyan-500" />
             <span>India View</span>
@@ -365,263 +627,22 @@ export const GridMapView: React.FC = () => {
         </div>
       </div>
 
-      {/* 3-Panel Layout: Left (25%) | Center (55%) | Right (20%) */}
+      {/* 3-Panel Layout: Desktop (25/55/20), Tablet (Full Map + Collapsible Drawers), Mobile (Full Map + FABs + Bottom Sheets) */}
       <div className="grid grid-cols-1 lg:grid-cols-[25fr_55fr_20fr] gap-4 items-stretch">
-        {/* LEFT PANEL (25%): Search Bar + Cascading Geographic Filters + Layer Controls */}
-        <div className="space-y-4">
-          {/* Search Bar */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-2 relative">
-            <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <Search className="w-3.5 h-3.5 text-cyan-500" />
-              <span>Asset &amp; Location Search</span>
-            </div>
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="State, district, area, pincode, landmark, ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && searchResults.length > 0) {
-                    handleSelectSearch(searchResults[0]);
-                  }
-                }}
-                className="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  aria-label="Clear search"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            {searchQuery.trim() && (
-              <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto bg-white dark:bg-slate-900">
-                {searchResults.length > 0 ? (
-                  searchResults.map((res) => (
-                    <button
-                      type="button"
-                      key={res.id}
-                      onClick={() => handleSelectSearch(res)}
-                      className="w-full text-left p-2 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between gap-2 transition-colors cursor-pointer"
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          {res.asset && <SourceBadge source={res.asset.source} compact />}
-                          <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
-                            {res.label}
-                          </div>
-                        </div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                          {res.sublabel}
-                        </div>
-                      </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    </button>
-                  ))
-                ) : (
-                  <div className="p-2.5 text-xs text-slate-500 dark:text-slate-400">
-                    No matching regions, pincodes, or canonical assets found.
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Cascading Geographic Filters */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-            <div className="px-3.5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setFiltersOpen((prev) => !prev)}
-                className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 cursor-pointer"
-              >
-                <Filter className="w-3.5 h-3.5 text-cyan-500" />
-                <span>Geographic Filters</span>
-                {filtersOpen ? (
-                  <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
-                ) : (
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                )}
-              </button>
-
-              {hasRegionSelection && (
-                <button
-                  type="button"
-                  onClick={resetGeoFilter}
-                  className="text-[11px] font-mono text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>Reset</span>
-                </button>
-              )}
-            </div>
-
-            {filtersOpen && (
-              <div className="p-3.5 space-y-2.5">
-                {renderSelect(
-                  'Country',
-                  'country',
-                  geoFilter.country,
-                  countryOptions,
-                  false,
-                  'Select Country'
-                )}
-                {renderSelect(
-                  'State / Union Territory',
-                  'state',
-                  geoFilter.state,
-                  stateOptions,
-                  !geoFilter.country,
-                  `All States & UTs (${stateOptions.length} Available)`
-                )}
-                {renderSelect(
-                  'District',
-                  'district',
-                  geoFilter.district,
-                  districtOptions,
-                  !geoFilter.state,
-                  'Select District...'
-                )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {renderSelect(
-                    'Division',
-                    'division',
-                    geoFilter.division,
-                    divisionOptions,
-                    divisionOptions.length === 0,
-                    'All Divisions'
-                  )}
-                  {renderSelect(
-                    'Subdivision',
-                    'subdivision',
-                    geoFilter.subdivision,
-                    subdivisionOptions,
-                    subdivisionOptions.length === 0,
-                    'All Subdivisions'
-                  )}
-                </div>
-                {renderSelect(
-                  'City / Town',
-                  'city',
-                  geoFilter.city,
-                  cityOptions,
-                  cityOptions.length === 0,
-                  'All Cities / Towns'
-                )}
-                {renderSelect(
-                  'Area / Locality',
-                  'area',
-                  geoFilter.area,
-                  areaOptions,
-                  areaOptions.length === 0,
-                  'All Areas / Localities'
-                )}
-
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
-                  {renderSelect(
-                    'Substation',
-                    'substationId',
-                    geoFilter.substationId,
-                    substationOptions,
-                    substationOptions.length === 0,
-                    `All Substations (${substationOptions.length})`
-                  )}
-                  {renderSelect(
-                    'Feeder',
-                    'feederId',
-                    geoFilter.feederId,
-                    feederOptions,
-                    feederOptions.length === 0,
-                    `All Feeders (${feederOptions.length})`
-                  )}
-                  {renderSelect(
-                    'Transformer',
-                    'transformerId',
-                    geoFilter.transformerId,
-                    transformerOptions,
-                    transformerOptions.length === 0,
-                    `All Transformers (${transformerOptions.length})`
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Layer Controls */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-            <div className="px-3.5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setLayersOpen((prev) => !prev)}
-                className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 cursor-pointer"
-              >
-                <Layers className="w-3.5 h-3.5 text-cyan-500" />
-                <span>Layer Controls</span>
-                {layersOpen ? (
-                  <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
-                ) : (
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                )}
-              </button>
-              <span className="text-[10px] font-mono text-slate-400">
-                {LAYER_TOGGLES.filter((l) => mapLayers[l.key]).length}/{LAYER_TOGGLES.length} Active
-              </span>
-            </div>
-
-            {layersOpen && (
-              <div className="p-3.5 space-y-2">
-                {LAYER_TOGGLES.map((item) => {
-                  const enabled = Boolean(mapLayers[item.key]);
-                  return (
-                    <div
-                      key={item.key}
-                      className="flex items-center justify-between gap-2 text-xs"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${item.colorClass}`} />
-                        <span className="text-slate-700 dark:text-slate-300 truncate">
-                          {item.label}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={enabled}
-                        aria-label={`Toggle ${item.label}`}
-                        onClick={() => handleToggleLayer(item.key)}
-                        className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-                          enabled ? 'bg-cyan-600' : 'bg-slate-300 dark:bg-slate-700'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
-                            enabled ? 'translate-x-4.5' : 'translate-x-1'
-                          }`}
-                        />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+        {/* LEFT PANEL (Desktop >=1024px) */}
+        <div className="hidden lg:block space-y-4">
+          {renderSearchPanel()}
+          {renderFiltersAndLayers()}
         </div>
 
-        {/* CENTER PANEL (55%): Interactive Mapbox GL Map (+ Split Sync Knowledge Graph) */}
-        <div className="flex flex-col gap-3 min-w-0 h-full min-h-[600px] lg:min-h-[calc(100vh-11.5rem)]">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs shrink-0">
+        {/* CENTER PANEL: Interactive Mapbox GL Map (+ Split Sync Knowledge Graph) */}
+        <div className="flex flex-col gap-3 min-w-0 h-full min-h-[460px] lg:min-h-[calc(100vh-11.5rem)]">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs shrink-0">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[11px] font-mono uppercase text-slate-400 shrink-0">
+              <span className="text-[11px] font-mono uppercase text-slate-400 shrink-0 hidden sm:inline">
                 Active Scope:
               </span>
-              <span className="font-mono font-semibold text-slate-800 dark:text-slate-200 truncate">
+              <span className="font-mono font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[170px] sm:max-w-none">
                 {geoScopeLabel}
               </span>
             </div>
@@ -645,6 +666,15 @@ export const GridMapView: React.FC = () => {
             </div>
           </div>
 
+          {locationBanner && (
+            <div className="px-3.5 py-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-300 dark:border-cyan-800 text-xs text-cyan-800 dark:text-cyan-200 flex items-center justify-between gap-2 shrink-0">
+              <span className="flex items-center gap-2">
+                <LocateFixed className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
+                <span>{locationBanner}</span>
+              </span>
+            </div>
+          )}
+
           {osmError && (
             <div className="px-3.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200 flex items-center justify-between gap-2 shrink-0">
               <span className="flex items-center gap-2">
@@ -655,21 +685,84 @@ export const GridMapView: React.FC = () => {
           )}
 
           {splitSyncOpen ? (
-            <div className="flex-1 grid grid-cols-1 xl:grid-cols-2 gap-3 min-h-[560px] relative">
-              <GridMapComponent heightClass="h-full min-h-[420px]" />
-              <div className="flex flex-col gap-2 min-h-[420px]">
+            <div className="flex-1 grid grid-cols-1 xl:grid-cols-2 gap-3 min-h-[480px] lg:min-h-[560px] relative">
+              <GridMapComponent
+                heightClass="h-[360px] sm:h-[420px] lg:h-full min-h-[360px]"
+                flyToRequest={flyToRequest}
+              />
+              <div className="flex flex-col gap-2 min-h-[360px]">
                 <div className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono text-cyan-300 flex items-center justify-between">
                   <span>SYNCHRONIZED KNOWLEDGE GRAPH</span>
                   <span className="text-slate-400">Hover or click node &harr; map</span>
                 </div>
-                <KnowledgeGraphCanvas heightClass="flex-1 min-h-[380px]" compactLegend />
+                <KnowledgeGraphCanvas heightClass="flex-1 min-h-[340px]" compactLegend />
               </div>
             </div>
           ) : (
-            <div className="relative flex-1 flex flex-col min-h-[560px]">
-              <GridMapComponent heightClass="flex-1 min-h-[560px]" />
+            <div className="relative flex-1 flex flex-col h-[calc(100dvh-13.5rem)] min-h-[460px] lg:min-h-[560px]">
+              <GridMapComponent
+                heightClass="flex-1 h-full min-h-[460px] lg:min-h-[560px]"
+                flyToRequest={flyToRequest}
+              />
+
+              {/* Mobile Floating Action Buttons (FABs) on Map (<md) */}
+              <div className="md:hidden absolute right-3 bottom-16 z-20 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMobileSheet('search')}
+                  aria-label="Search map assets and locations"
+                  title="Search"
+                  className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700 shadow-lg flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+                >
+                  <Search className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileSheet('layers')}
+                  aria-label="Open map layers and geographic filters"
+                  title="Layers & Filters"
+                  className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700 shadow-lg flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+                >
+                  <Layers className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLiveLocation}
+                  aria-label="Center map on live GPS location"
+                  title="Live Location"
+                  className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700 shadow-lg flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+                >
+                  {locatingGps ? (
+                    <Loader2 className="w-5 h-5 text-cyan-500 animate-spin" />
+                  ) : (
+                    <LocateFixed className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={resetGeoFilter}
+                  aria-label="Reset map to India view"
+                  title="Reset View"
+                  className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700 shadow-lg flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+                >
+                  <RotateCcw className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                </button>
+              </div>
+
+              {/* Mobile Floating Asset Inspector Trigger Pill (<md) */}
+              <button
+                type="button"
+                onClick={() => setMobileSheet('inspector')}
+                className="md:hidden absolute left-3 bottom-4 z-20 min-h-[44px] px-3.5 py-2 rounded-full bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-semibold shadow-xl border border-cyan-400/50 inline-flex items-center gap-2 max-w-[calc(100%-5.5rem)] cursor-pointer"
+              >
+                <Zap className="w-4 h-4 shrink-0" />
+                <span className="truncate">
+                  {activeAsset ? `Inspect: ${activeAsset.canonicalId}` : 'Asset Inspector'}
+                </span>
+              </button>
+
               {scopedAssetCounts.totalAssets === 0 && (
-                <div className="absolute inset-x-6 bottom-16 z-20 mx-auto max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-slate-300 dark:border-slate-700 rounded-xl p-4 shadow-xl text-center space-y-2">
+                <div className="absolute inset-x-4 sm:inset-x-6 bottom-20 z-20 mx-auto max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-slate-300 dark:border-slate-700 rounded-xl p-4 shadow-xl text-center space-y-2">
                   <div className="text-xs font-bold text-slate-900 dark:text-white">
                     No grid assets mapped in {geoScopeLabel}
                   </div>
@@ -679,7 +772,7 @@ export const GridMapView: React.FC = () => {
                   <button
                     type="button"
                     onClick={resetGeoFilter}
-                    className="px-3 py-1.5 text-xs font-mono font-semibold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors cursor-pointer"
+                    className="min-h-[44px] px-4 py-1.5 text-xs font-mono font-semibold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors cursor-pointer"
                   >
                     Reset Geographic Filters
                   </button>
@@ -689,8 +782,8 @@ export const GridMapView: React.FC = () => {
           )}
         </div>
 
-        {/* RIGHT PANEL (20%): Asset Summary, Status, Alerts, Maintenance History, Connected Assets & Quick Actions */}
-        <div className="space-y-4 min-w-0">
+        {/* RIGHT PANEL (Desktop >=1024px) */}
+        <div className="hidden lg:block space-y-4 min-w-0">
           {maintenanceBanner && (
             <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-800 dark:text-emerald-200 space-y-1.5">
               <div className="flex items-start gap-2">
@@ -1164,6 +1257,240 @@ export const GridMapView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Mobile Bottom Sheet: Search */}
+      <ResponsiveDrawer
+        open={mobileSheet === 'search'}
+        onClose={() => setMobileSheet(null)}
+        title="Search Assets & Geography"
+        subtitle="Jump directly to any state, feeder, or substation"
+        variant="bottom"
+      >
+        {renderSearchPanel()}
+      </ResponsiveDrawer>
+
+      {/* Mobile Bottom Sheet: Filters & Layers */}
+      <ResponsiveDrawer
+        open={mobileSheet === 'layers'}
+        onClose={() => setMobileSheet(null)}
+        title="Map Layers & Geographic Filters"
+        subtitle={geoScopeLabel}
+        variant="bottom"
+      >
+        {renderFiltersAndLayers()}
+      </ResponsiveDrawer>
+
+      {/* Tablet Left Drawer: Search, Filters & Layers */}
+      <ResponsiveDrawer
+        open={tabletLeftOpen}
+        onClose={() => setTabletLeftOpen(false)}
+        title="Search, Filters & Layers"
+        subtitle={geoScopeLabel}
+        variant="left"
+      >
+        <div className="space-y-4">
+          {renderSearchPanel()}
+          {renderFiltersAndLayers()}
+        </div>
+      </ResponsiveDrawer>
+
+      {/* Mobile Bottom Sheet & Tablet Right Drawer: Asset Details & Quick Actions */}
+      <ResponsiveDrawer
+        open={mobileSheet === 'inspector' || tabletRightOpen}
+        onClose={() => {
+          setMobileSheet(null);
+          setTabletRightOpen(false);
+        }}
+        title={activeAsset ? `Asset: ${activeAsset.canonicalId}` : 'Asset Inspector'}
+        subtitle={
+          activeAsset
+            ? `${activeAsset.assetType} · ${formatMissingValue(activeAsset.rawName ?? activeAsset.name)}`
+            : geoScopeLabel
+        }
+        variant={tabletRightOpen ? 'right' : 'bottom'}
+      >
+        <div className="space-y-4 text-xs">
+          {maintenanceBanner && (
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-800 dark:text-emerald-200">
+              {maintenanceBanner}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-2 font-mono tabular-nums">
+            <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+              <div className="text-[10px] text-slate-400">Substations</div>
+              <div className="text-sm font-bold text-slate-900 dark:text-white">
+                {scopedAssetCounts.substations}
+              </div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+              <div className="text-[10px] text-slate-400">Feeders</div>
+              <div className="text-sm font-bold text-slate-900 dark:text-white">
+                {scopedAssetCounts.feeders}
+              </div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+              <div className="text-[10px] text-slate-400">Transformers</div>
+              <div className="text-sm font-bold text-slate-900 dark:text-white">
+                {scopedAssetCounts.transformers}
+              </div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+              <div className="text-[10px] text-slate-400">Breakers / SW</div>
+              <div className="text-sm font-bold text-slate-900 dark:text-white">
+                {scopedAssetCounts.breakersAndSwitches}
+              </div>
+            </div>
+          </div>
+
+          {activeAsset && (
+            <div className="space-y-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-mono font-bold text-slate-900 dark:text-white">
+                  {activeAsset.canonicalId}
+                </span>
+                <SourceBadge source={activeAsset.source} compact />
+              </div>
+              <div className="font-medium text-slate-700 dark:text-slate-300">
+                {formatMissingValue(activeAsset.rawName ?? activeAsset.name)}
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 text-[11px] font-mono pt-1 border-t border-slate-200 dark:border-slate-700/60">
+                <span className="text-slate-500">Status:</span>
+                <span className="text-right font-bold">{activeTelemetry?.status ?? activeAsset.status}</span>
+                <span className="text-slate-500">Voltage:</span>
+                <span className="text-right">{formatMissingValue(activeAsset.voltage)}</span>
+                <span className="text-slate-500">Load:</span>
+                <span className="text-right font-bold tabular-nums">
+                  {activeTelemetry?.loadKw !== null && activeTelemetry?.loadKw !== undefined
+                    ? `${activeTelemetry.loadKw.toLocaleString()} kW`
+                    : 'Not available'}
+                </span>
+              </div>
+              {activeHealth && (
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60">
+                  <AssetHealthGauge health={activeHealth} compact />
+                </div>
+              )}
+            </div>
+          )}
+
+          {scopedFaults.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-[11px] font-mono font-bold uppercase text-rose-600 dark:text-rose-400">
+                Active Faults ({scopedFaults.length})
+              </div>
+              {scopedFaults.slice(0, 3).map((fault) => (
+                <button
+                  key={fault.id}
+                  type="button"
+                  onClick={() => {
+                    focusFaultOnMap(fault.id);
+                    setMobileSheet(null);
+                    setTabletRightOpen(false);
+                  }}
+                  className="w-full min-h-[44px] text-left p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between gap-2 font-mono text-[11px] font-bold text-rose-600">
+                    <span>⚡ {fault.faultCode}</span>
+                    <span>{fault.severity}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-800 dark:text-slate-200 mt-0.5">
+                    {fault.title}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+            <button
+              type="button"
+              disabled={!activeAsset}
+              onClick={() => {
+                if (activeAsset) {
+                  selectAsset(activeAsset.canonicalId, 'search', { zoom: 16, openPopup: true });
+                }
+                setMobileSheet(null);
+                setTabletRightOpen(false);
+              }}
+              className="min-h-[44px] px-3 py-2 text-xs font-semibold text-white bg-slate-900 dark:bg-slate-100 dark:text-slate-900 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              <Navigation className="w-4 h-4" />
+              <span>Navigate to Asset</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMobileSheet(null);
+                setTabletRightOpen(false);
+                if (activeAsset) {
+                  openKnowledgeGraphForAsset(activeAsset.canonicalId);
+                } else {
+                  setActiveView('graph');
+                }
+              }}
+              className="min-h-[44px] px-3 py-2 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Network className="w-4 h-4" />
+              <span>Knowledge Graph</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMobileSheet(null);
+                setTabletRightOpen(false);
+                if (activeAsset) {
+                  openEventReconstructionForAsset(activeAsset.canonicalId);
+                } else {
+                  setActiveView('events');
+                }
+              }}
+              className="min-h-[44px] px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Clock className="w-4 h-4 text-cyan-500" />
+              <span>Event Timeline</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMobileSheet(null);
+                setTabletRightOpen(false);
+                if (activeAsset) {
+                  launchSimulationForAsset(activeAsset);
+                } else {
+                  setActiveView('simulator');
+                }
+              }}
+              className="min-h-[44px] px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Cpu className="w-4 h-4 text-cyan-500" />
+              <span>Run Simulation</span>
+            </button>
+            <button
+              type="button"
+              disabled={!activeAsset}
+              onClick={handleRaiseMaintenance}
+              className="min-h-[44px] px-3 py-2 text-xs font-semibold text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              <Wrench className="w-4 h-4" />
+              <span>Maintenance Req</span>
+            </button>
+            <button
+              type="button"
+              disabled={!activeAsset}
+              onClick={() => {
+                if (activeAsset) openFieldTaskForAsset(activeAsset.canonicalId);
+                setMobileSheet(null);
+                setTabletRightOpen(false);
+              }}
+              className="min-h-[44px] px-3 py-2 text-xs font-semibold text-indigo-800 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              <Wrench className="w-4 h-4" />
+              <span>Open Field Task</span>
+            </button>
+          </div>
+        </div>
+      </ResponsiveDrawer>
     </div>
   );
 };

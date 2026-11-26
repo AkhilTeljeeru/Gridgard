@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useGrid } from '../context/GridContext';
 import type { AlertSeverity } from '../types/grid';
+import { MobileRecordCardList, MobileRecordItem } from '../components/ui/MobileRecordCard';
 import {
   AlertTriangle,
   BellRing,
@@ -83,7 +84,7 @@ export const AlertCenterView: React.FC = () => {
       </div>
 
       {/* Severity Summary Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {(
           [
             { key: 'CRITICAL', label: 'Critical Alerts', tone: 'text-rose-600 dark:text-rose-400' },
@@ -114,26 +115,26 @@ export const AlertCenterView: React.FC = () => {
 
       {/* Filters + Alerts Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 w-full lg:w-auto">
+            <div className="relative w-full sm:w-64">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search asset, location, or alert..."
-                className="pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white w-64 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                className="pl-8 pr-3 py-2 lg:py-1.5 min-h-[44px] lg:min-h-0 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white w-full focus:outline-none focus:ring-1 focus:ring-cyan-500"
               />
             </div>
 
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg text-xs">
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg text-xs overflow-x-auto no-scrollbar max-w-full">
               {(['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'INFO'] as const).map((sev) => (
                 <button
                   key={sev}
                   type="button"
                   onClick={() => setSeverityFilter(sev)}
-                  className={`px-2.5 py-1 rounded text-[11px] font-mono transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                  className={`min-h-[36px] lg:min-h-0 px-2.5 py-1 rounded text-[11px] font-mono transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                     severityFilter === sev
                       ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-sm'
                       : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -144,7 +145,7 @@ export const AlertCenterView: React.FC = () => {
               ))}
             </div>
 
-            <label className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer px-2">
+            <label className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer px-2 min-h-[44px] lg:min-h-0">
               <input
                 type="checkbox"
                 checked={onlyUnacknowledged}
@@ -160,7 +161,79 @@ export const AlertCenterView: React.FC = () => {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="md:hidden p-3">
+          <MobileRecordCardList
+            emptyText="No grid alerts match the selected filters."
+            detailTitle="Alert Details"
+            onInspectAsset={(assetId) => focusAssetOnMap(assetId)}
+            items={filtered.map((alert): MobileRecordItem => ({
+              id: alert.id,
+              assetName: alert.assetName,
+              assetId: alert.assetId,
+              status: alert.severity,
+              statusTone:
+                alert.severity === 'CRITICAL'
+                  ? 'critical'
+                  : alert.severity === 'HIGH'
+                    ? 'warning'
+                    : alert.severity === 'MEDIUM'
+                      ? 'info'
+                      : 'neutral',
+              health: alert.acknowledged ? 'ACKED' : 'OPEN',
+              location: alert.locationLabel,
+              lastUpdated: alert.timestamp.replace('T', ' ').slice(0, 19),
+              summary: `${alert.title} — ${alert.recommendedAction}`,
+              detailFields: [
+                { label: 'Category', value: alert.category.replace('_', ' ') },
+                { label: 'Recommended Action', value: alert.recommendedAction },
+                { label: 'State', value: alert.acknowledged ? 'Acknowledged' : 'Pending Operator Ack' }
+              ],
+              actions: (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => focusAssetOnMap(alert.assetId)}
+                    className="min-h-[44px] px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-cyan-600 dark:text-cyan-400 inline-flex items-center gap-1"
+                  >
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span>Map</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openKnowledgeGraphForAsset(alert.assetId)}
+                    className="min-h-[44px] px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 inline-flex items-center gap-1"
+                  >
+                    <Network className="w-3.5 h-3.5" />
+                    <span>Graph</span>
+                  </button>
+                  {!alert.acknowledged ? (
+                    <button
+                      type="button"
+                      onClick={() => acknowledgeAlert(alert.id)}
+                      className="min-h-[44px] px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white inline-flex items-center gap-1"
+                    >
+                      <CheckCheck className="w-3.5 h-3.5" />
+                      <span>Acknowledge</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        selectAsset(alert.assetId, 'notifications', { openPopup: false });
+                        setActiveView(alert.targetView || 'overview');
+                      }}
+                      className="min-h-[44px] px-3 py-2 text-xs font-semibold rounded-lg bg-cyan-600 text-white"
+                    >
+                      Open Workflow
+                    </button>
+                  )}
+                </>
+              )
+            }))}
+          />
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 font-mono border-b border-slate-200 dark:border-slate-800">
               <tr>

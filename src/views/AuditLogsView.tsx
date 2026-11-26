@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useGrid } from '../context/GridContext';
+import { MobileRecordCardList, MobileRecordItem } from '../components/ui/MobileRecordCard';
 import {
   ScrollText,
   Search,
@@ -146,24 +147,24 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ embedded = false }
       {/* Filter and Search Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden space-y-3">
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 w-full lg:w-auto">
+            <div className="relative w-full sm:w-64">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Search actor, action, or summary..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-cyan-500 w-64"
+                className="pl-8 pr-3 py-2 lg:py-1.5 min-h-[44px] lg:min-h-0 text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-cyan-500 w-full"
               />
             </div>
 
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-xs">
-              <Filter className="w-3.5 h-3.5 text-slate-400 ml-1.5" />
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 lg:p-0.5 rounded-lg text-xs w-full sm:w-auto min-h-[44px] lg:min-h-0">
+              <Filter className="w-3.5 h-3.5 text-slate-400 ml-1.5 shrink-0" />
               <select
                 value={filterAction}
                 onChange={(e) => setFilterAction(e.target.value)}
-                className="bg-transparent text-slate-700 dark:text-slate-200 pr-2 py-1 text-xs focus:outline-none cursor-pointer"
+                className="bg-transparent text-slate-700 dark:text-slate-200 pr-2 py-1 text-xs focus:outline-none cursor-pointer w-full"
               >
                 <option value="ALL">All Actions</option>
                 <option value="USER_LOGIN">User Login / Role Switch</option>
@@ -189,7 +190,7 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ embedded = false }
               <button
                 type="button"
                 onClick={() => setThreadOnly((prev) => !prev)}
-                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-mono border transition-colors inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                className={`min-h-[44px] lg:min-h-0 px-2.5 py-1.5 rounded-lg text-[11px] font-mono border transition-colors inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
                   threadOnly
                     ? 'bg-cyan-600 text-white border-cyan-500'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-cyan-500/50'
@@ -210,8 +211,62 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ embedded = false }
           </span>
         </div>
 
+        {/* Mobile Card View */}
+        <div className="md:hidden p-3">
+          <MobileRecordCardList
+            emptyText={
+              threadOnly && selectedAssetId
+                ? `No audit provenance records tied directly to ${selectedAssetId}.`
+                : `No audit provenance records match ${geoScopeLabel}.`
+            }
+            detailTitle="Audit Provenance Record"
+            items={filteredLogs.map((log): MobileRecordItem => {
+              const resolvedAssetId = resolveAuditAssetId(log.targetEntity, log.summary);
+              return {
+                id: log.id,
+                assetName: log.targetEntity,
+                assetId: log.relatedAssetId || resolvedAssetId || log.id,
+                status: log.actionType,
+                statusTone: 'info',
+                health: 'SEALED',
+                location: log.module || geoScopeLabel,
+                lastUpdated: log.timestamp.replace('T', ' ').slice(0, 19),
+                summary: log.summary,
+                detailFields: [
+                  { label: 'Operator', value: `${log.actorEmail} (${log.actorRole})` },
+                  { label: 'Module', value: log.module || 'Core Telemetry' },
+                  { label: 'Origin IP', value: log.ipAddress },
+                  ...(log.relatedIncidentId
+                    ? [{ label: 'Incident ID', value: log.relatedIncidentId }]
+                    : [])
+                ],
+                actions: resolvedAssetId ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => focusAssetOnMap(resolvedAssetId)}
+                      className="min-h-[44px] px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-cyan-600 dark:text-cyan-400 inline-flex items-center gap-1"
+                    >
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>Map</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openKnowledgeGraphForAsset(resolvedAssetId)}
+                      className="min-h-[44px] px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 inline-flex items-center gap-1"
+                    >
+                      <Network className="w-3.5 h-3.5" />
+                      <span>Graph</span>
+                    </button>
+                  </>
+                ) : undefined
+              };
+            })}
+          />
+        </div>
+
         {/* Audit Table */}
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 font-mono border-b border-slate-200 dark:border-slate-800">
               <tr>

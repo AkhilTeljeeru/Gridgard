@@ -71,12 +71,12 @@ export const AuthSessionModal: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl max-w-lg w-full shadow-2xl overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl max-w-lg w-[calc(100vw-1.5rem)] sm:w-full max-h-[90dvh] flex flex-col shadow-2xl overflow-hidden">
+        <div className="px-4 sm:px-5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <ShieldCheck className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
               JWT Identity &amp; RBAC Session Security
             </h3>
           </div>
@@ -84,14 +84,14 @@ export const AuthSessionModal: React.FC<{
             type="button"
             aria-label="Close security modal"
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded cursor-pointer"
+            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Mode Tabs */}
-        <div className="px-5 pt-3 flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
+        <div className="px-4 sm:px-5 pt-2 flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto no-scrollbar shrink-0">
           {(['session', 'login', 'register'] as const).map((t) => (
             <button
               key={t}
@@ -100,7 +100,7 @@ export const AuthSessionModal: React.FC<{
                 setFeedback(null);
                 setTab(t);
               }}
-              className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`min-h-[44px] lg:min-h-0 px-3 py-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 tab === t
                   ? 'border-cyan-500 text-cyan-600 dark:text-cyan-400'
                   : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -115,7 +115,7 @@ export const AuthSessionModal: React.FC<{
           ))}
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto">
           {feedback && (
             <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-600 dark:text-rose-400">
               {feedback}
@@ -214,7 +214,7 @@ export const AuthSessionModal: React.FC<{
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="operator@utilitygrid.org"
-                  className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                  className="w-full min-h-[44px] lg:min-h-0 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 />
               </div>
               <div>
@@ -227,13 +227,13 @@ export const AuthSessionModal: React.FC<{
                   minLength={8}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                  className="w-full min-h-[44px] lg:min-h-0 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 />
               </div>
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-2 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
+                className="w-full min-h-[44px] py-2 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
               >
                 <KeyRound className="w-3.5 h-3.5" />
                 <span>{submitting ? 'Verifying...' : 'Sign In & Issue JWT'}</span>
@@ -320,7 +320,7 @@ export const AuthSessionModal: React.FC<{
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-2 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
+                className="w-full min-h-[44px] py-2 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>{submitting ? 'Creating Account...' : 'Create Operator Account'}</span>

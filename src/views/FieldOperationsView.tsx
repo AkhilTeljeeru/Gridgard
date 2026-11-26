@@ -138,6 +138,7 @@ export const FieldOperationsView: React.FC = () => {
   } = useGrid();
 
   const [leftTab, setLeftTab] = useState<'engineers' | 'dispatch' | 'tasks'>('engineers');
+  const [mobileSection, setMobileSection] = useState<'map' | 'crew' | 'task'>('map');
   const [centerSubTab, setCenterSubTab] = useState<'timeline' | 'geofences'>('timeline');
   const [engineerStatusFilter, setEngineerStatusFilter] = useState<'ALL' | FieldEngineerStatus>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | FieldTaskStatus>('ALL');
@@ -609,7 +610,7 @@ export const FieldOperationsView: React.FC = () => {
       </div>
 
       {/* Manager Operations Dashboard KPI Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-2.5">
         <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
           <div className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">
             Engineers Online
@@ -871,9 +872,47 @@ export const FieldOperationsView: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        <div className="space-y-3">
+          {/* Mobile / Tablet Section Switcher (Map First on Mobile, Preserves 3-col on lg+) */}
+          <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/70 lg:hidden">
+            <button
+              type="button"
+              onClick={() => setMobileSection('map')}
+              className={`min-h-[44px] px-2 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                mobileSection === 'map'
+                  ? 'bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              Live Map
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileSection('crew')}
+              className={`min-h-[44px] px-2 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                mobileSection === 'crew'
+                  ? 'bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              Crew &amp; Dispatch
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileSection('task')}
+              className={`min-h-[44px] px-2 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                mobileSection === 'task'
+                  ? 'bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              Task &amp; Evidence
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
           {/* LEFT PANEL (25% -> col-span-3): Engineers Roster + Intelligent Dispatch + Task Queue */}
-          <div className="lg:col-span-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-3">
+          <div className={`${mobileSection === 'crew' ? 'block' : 'hidden'} lg:block lg:col-span-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-3`}>
             {/* Left Tabs */}
             <div className="grid grid-cols-3 gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold">
               <button
@@ -1216,9 +1255,9 @@ export const FieldOperationsView: React.FC = () => {
           </div>
 
           {/* CENTER PANEL (55% -> col-span-6): Live Mapbox Map + Incident Timeline + Geo-Fence Feed */}
-          <div className="lg:col-span-6 space-y-4">
+          <div className={`${mobileSection === 'map' ? 'block' : 'hidden'} lg:block lg:col-span-6 space-y-4`}>
             <GridMapComponent
-              heightClass="h-[500px]"
+              heightClass="h-[340px] sm:h-[440px] lg:h-[500px]"
               showFieldWorkforce
               focusEngineerNonce={focusEngineerNonce}
               onSelectEngineer={(eng) => handleSelectEngineer(eng)}
@@ -1346,7 +1385,7 @@ export const FieldOperationsView: React.FC = () => {
           </div>
 
           {/* RIGHT PANEL (20% -> col-span-3): Engineer Details, Route ETA, Task Lifecycle & Evidence */}
-          <div className="lg:col-span-3 space-y-4">
+          <div className={`${mobileSection === 'task' ? 'block' : 'hidden'} lg:block lg:col-span-3 space-y-4`}>
             {/* Selected Engineer Telemetry Card */}
             {selectedEngineer && (
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3 text-xs">
@@ -1749,7 +1788,7 @@ export const FieldOperationsView: React.FC = () => {
                 </div>
 
                 {/* Meter Readings */}
-                <div className="grid grid-cols-4 gap-1.5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                   <div>
                     <label className="text-[9px] font-mono text-slate-400 block">kV</label>
                     <input
@@ -1757,7 +1796,7 @@ export const FieldOperationsView: React.FC = () => {
                       step="0.01"
                       value={evVoltageKv}
                       onChange={(e) => setEvVoltageKv(e.target.value)}
-                      className="w-full p-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-[11px] tabular-nums"
+                      className="w-full min-h-[44px] lg:min-h-0 p-1.5 lg:p-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-[11px] tabular-nums"
                     />
                   </div>
                   <div>
@@ -1766,7 +1805,7 @@ export const FieldOperationsView: React.FC = () => {
                       type="number"
                       value={evLoadAmps}
                       onChange={(e) => setEvLoadAmps(e.target.value)}
-                      className="w-full p-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-[11px] tabular-nums"
+                      className="w-full min-h-[44px] lg:min-h-0 p-1.5 lg:p-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-[11px] tabular-nums"
                     />
                   </div>
                   <div>
@@ -1775,7 +1814,7 @@ export const FieldOperationsView: React.FC = () => {
                       type="number"
                       value={evInsulationMohm}
                       onChange={(e) => setEvInsulationMohm(e.target.value)}
-                      className="w-full p-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-[11px] tabular-nums"
+                      className="w-full min-h-[44px] lg:min-h-0 p-1.5 lg:p-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-[11px] tabular-nums"
                     />
                   </div>
                   <div>
@@ -1785,13 +1824,13 @@ export const FieldOperationsView: React.FC = () => {
                       step="0.1"
                       value={evTemperatureC}
                       onChange={(e) => setEvTemperatureC(e.target.value)}
-                      className="w-full p-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-[11px] tabular-nums"
+                      className="w-full min-h-[44px] lg:min-h-0 p-1.5 lg:p-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-[11px] tabular-nums"
                     />
                   </div>
                 </div>
 
                 {/* Optional Video / Voice Note Metadata */}
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   <div className="relative">
                     <Video className="w-3 h-3 text-slate-400 absolute left-2 top-2" />
                     <input
@@ -1864,15 +1903,16 @@ export const FieldOperationsView: React.FC = () => {
               </form>
             )}
           </div>
+          </div>
         </div>
       )}
 
       {/* Create Field Task Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
           <form
             onSubmit={handleCreateTask}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl text-xs"
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-[calc(100vw-1.5rem)] sm:w-full max-h-[90dvh] overflow-y-auto p-4 sm:p-6 space-y-4 shadow-2xl text-xs"
           >
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -1880,8 +1920,9 @@ export const FieldOperationsView: React.FC = () => {
               </h3>
               <button
                 type="button"
+                aria-label="Close modal"
                 onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer rounded-lg"
               >
                 ✕
               </button>
@@ -1935,7 +1976,7 @@ export const FieldOperationsView: React.FC = () => {
                   className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-semibold text-slate-800 dark:text-slate-200 block mb-1">
                     Priority
@@ -1943,7 +1984,7 @@ export const FieldOperationsView: React.FC = () => {
                   <select
                     value={newTaskPriority}
                     onChange={(e) => setNewTaskPriority(e.target.value as PriorityLevel)}
-                    className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                    className="w-full min-h-[44px] lg:min-h-0 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
                   >
                     <option value="CRITICAL">CRITICAL</option>
                     <option value="HIGH">HIGH</option>
@@ -1959,7 +2000,7 @@ export const FieldOperationsView: React.FC = () => {
                     type="datetime-local"
                     value={newTaskDueDate}
                     onChange={(e) => setNewTaskDueDate(e.target.value)}
-                    className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                    className="w-full min-h-[44px] lg:min-h-0 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
                   />
                 </div>
               </div>
@@ -1977,17 +2018,17 @@ export const FieldOperationsView: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="px-4 py-2 text-slate-600 dark:text-slate-300 cursor-pointer"
+                className="w-full sm:w-auto min-h-[44px] lg:min-h-0 px-4 py-2 text-slate-600 dark:text-slate-300 cursor-pointer rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 font-semibold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg cursor-pointer"
+                className="w-full sm:w-auto min-h-[44px] lg:min-h-0 px-4 py-2 font-semibold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg cursor-pointer"
               >
                 Dispatch Field Task
               </button>

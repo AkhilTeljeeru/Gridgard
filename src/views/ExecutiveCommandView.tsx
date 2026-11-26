@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useGrid } from '../context/GridContext';
 import type { DashboardWidgetId, RegionalKpiScope } from '../types/grid';
+import { MobileRecordCardList } from '../components/ui/MobileRecordCard';
 import {
   ArrowDown,
   ArrowUp,
@@ -116,7 +117,7 @@ export const ExecutiveCommandView: React.FC<ExecutiveCommandViewProps> = ({ embe
     switch (widgetId) {
       case 'EXECUTIVE_KPI_STRIP':
         return (
-          <div key={widgetId} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div key={widgetId} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
               <div className="text-[11px] font-mono uppercase text-slate-500">Total Grid Health</div>
               <div className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1 tabular-nums">
@@ -192,7 +193,7 @@ export const ExecutiveCommandView: React.FC<ExecutiveCommandViewProps> = ({ embe
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 font-mono border-b border-slate-200 dark:border-slate-800">
                   <tr>
@@ -260,6 +261,31 @@ export const ExecutiveCommandView: React.FC<ExecutiveCommandViewProps> = ({ embe
                 </tbody>
               </table>
             </div>
+
+            <MobileRecordCardList
+              detailTitle="Regional Performance KPIs"
+              items={filteredKpis.map((k) => {
+                const meetsRel =
+                  k.gridReliabilityPct >= dashboardCustomization.customKpiTargets.reliabilityTargetPct;
+                return {
+                  id: k.regionId,
+                  assetName: k.regionName,
+                  assetId: k.regionId,
+                  status: meetsRel ? 'ON TARGET' : 'BELOW SLA',
+                  statusTone: meetsRel ? 'healthy' : 'warning',
+                  health: `${k.gridReliabilityPct}% Rel`,
+                  location: k.parentRegion ? `${k.scopeLevel} · ${k.parentRegion}` : k.scopeLevel,
+                  lastUpdated: `MTTR ${k.mttrHours}h`,
+                  detailFields: [
+                    { label: 'Availability', value: `${k.assetAvailabilityPct}%` },
+                    { label: 'Fault Frequency', value: `${k.faultFrequencyPer100Km}/100km` },
+                    { label: 'MTBF', value: `${k.mtbfHours}h` },
+                    { label: 'Maint. Compliance', value: `${k.maintenanceCompliancePct}%` },
+                    { label: 'Avg Response', value: `${k.avgResponseTimeMin} min` }
+                  ]
+                };
+              })}
+            />
           </div>
         );
 
@@ -359,7 +385,7 @@ export const ExecutiveCommandView: React.FC<ExecutiveCommandViewProps> = ({ embe
               </button>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 font-mono border-b border-slate-200 dark:border-slate-800">
                   <tr>
@@ -402,6 +428,26 @@ export const ExecutiveCommandView: React.FC<ExecutiveCommandViewProps> = ({ embe
                 </tbody>
               </table>
             </div>
+
+            <MobileRecordCardList
+              detailTitle="Scenario Comparison"
+              items={enterpriseScenarioComparison.map((row) => ({
+                id: row.scenarioId,
+                assetName: row.label,
+                assetId: row.scenarioId,
+                status: `${row.riskLevel} RISK`,
+                statusTone:
+                  row.riskLevel === 'HIGH' ? 'critical' : row.riskLevel === 'MEDIUM' ? 'warning' : 'healthy',
+                health: `${row.minVoltagePu} p.u.`,
+                location: `${row.customerImpactCount.toLocaleString()} customers`,
+                lastUpdated: `${row.estimatedRestorationMin} min`,
+                detailFields: [
+                  { label: 'Resource Utilization', value: `${row.resourceUtilizationPct}%` },
+                  { label: 'Est. Cost', value: `INR ${row.estimatedCostInrLakhs} Lakhs` },
+                  { label: 'Baseline', value: row.isBaseline ? 'Yes (Current)' : 'Alternative' }
+                ]
+              }))}
+            />
           </div>
         );
 
@@ -418,7 +464,7 @@ export const ExecutiveCommandView: React.FC<ExecutiveCommandViewProps> = ({ embe
               </h3>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 pt-1">
               {scopedAiSnapshot.monthlyFailureTrends.map((t) => (
                 <div
                   key={t.month}
@@ -538,12 +584,12 @@ export const ExecutiveCommandView: React.FC<ExecutiveCommandViewProps> = ({ embe
 
       {/* National -> State -> District -> Area Drill-down & Saved Filter Presets */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+        <div className="grid grid-cols-1 sm:flex sm:flex-wrap sm:items-center gap-2 text-xs w-full lg:w-auto">
           <span className="font-mono text-[11px] uppercase text-slate-500 mr-1">Drill-Down:</span>
           <button
             type="button"
             onClick={resetGeoFilter}
-            className={`px-2.5 py-1 rounded-md font-medium whitespace-nowrap shrink-0 cursor-pointer ${
+            className={`min-h-[44px] lg:min-h-0 px-3 py-1.5 rounded-md font-medium whitespace-nowrap shrink-0 cursor-pointer ${
               !geoFilter.state
                 ? 'bg-cyan-600 text-white'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
@@ -555,7 +601,7 @@ export const ExecutiveCommandView: React.FC<ExecutiveCommandViewProps> = ({ embe
             aria-label="Filter State"
             value={geoFilter.state}
             onChange={(e) => updateGeoFilterLevel('state', e.target.value)}
-            className="px-2.5 py-1 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100"
+            className="w-full sm:w-auto min-h-[44px] lg:min-h-0 px-2.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100"
           >
             <option value="">All States</option>
             {stateOptions.map((st) => (
@@ -566,7 +612,7 @@ export const ExecutiveCommandView: React.FC<ExecutiveCommandViewProps> = ({ embe
             aria-label="Filter District"
             value={geoFilter.district}
             onChange={(e) => updateGeoFilterLevel('district', e.target.value)}
-            className="px-2.5 py-1 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100"
+            className="w-full sm:w-auto min-h-[44px] lg:min-h-0 px-2.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100"
           >
             <option value="">All Districts</option>
             {districtOptions.map((d) => (
@@ -577,7 +623,7 @@ export const ExecutiveCommandView: React.FC<ExecutiveCommandViewProps> = ({ embe
             aria-label="Filter Area"
             value={geoFilter.area}
             onChange={(e) => updateGeoFilterLevel('area', e.target.value)}
-            className="px-2.5 py-1 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100"
+            className="w-full sm:w-auto min-h-[44px] lg:min-h-0 px-2.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100"
           >
             <option value="">All Areas</option>
             {areaOptions.map((a) => (

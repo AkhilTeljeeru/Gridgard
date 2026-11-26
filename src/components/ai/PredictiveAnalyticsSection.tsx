@@ -16,6 +16,7 @@ import {
 import { useGrid } from '../../context/GridContext';
 import { AssetHealthGauge } from './AssetHealthGauge';
 import { AssetAiTimelinePanel } from './AssetAiTimelinePanel';
+import { MobileRecordCardList } from '../ui/MobileRecordCard';
 
 type PredictiveTab = 'recommendations' | 'predictions' | 'risk' | 'patterns';
 
@@ -214,7 +215,7 @@ export const PredictiveAnalyticsSection: React.FC = () => {
       </div>
 
       {/* Sub-navigation Tabs */}
-      <div className="mt-4 flex flex-wrap items-center gap-1.5 border-b border-slate-200 pb-3 dark:border-slate-800">
+      <div className="mt-4 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-slate-200 pb-3 dark:border-slate-800">
         {(
           [
             { id: 'recommendations', label: `Explainable AI Recommendations (${recommendations.length})` },
@@ -229,7 +230,7 @@ export const PredictiveAnalyticsSection: React.FC = () => {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition whitespace-nowrap shrink-0 ${
+              className={`min-h-[44px] lg:min-h-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition whitespace-nowrap shrink-0 cursor-pointer ${
                 isActive
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -417,81 +418,112 @@ export const PredictiveAnalyticsSection: React.FC = () => {
       {/* Tab 2: Predictive Maintenance Forecasts & 7-Stage Asset AI Timeline */}
       {activeTab === 'predictions' && (
         <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-12">
-          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 lg:col-span-7">
-            <table className="w-full border-collapse text-left text-xs">
-              <thead className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:bg-slate-950 dark:text-slate-400">
-                <tr>
-                  <th className="px-3 py-2.5">Asset</th>
-                  <th className="px-3 py-2.5">Failure Type</th>
-                  <th className="px-3 py-2.5 text-right">Prob.</th>
-                  <th className="px-3 py-2.5 text-right">Conf.</th>
-                  <th className="px-3 py-2.5">Window</th>
-                  <th className="px-3 py-2.5">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {predictions.map((pred) => {
-                  const isFocused = pred.assetId === focusedAssetId;
-                  return (
-                    <tr
-                      key={pred.id}
-                      onClick={() => selectAsset(pred.assetId, 'overview', { openPopup: false })}
-                      className={`cursor-pointer transition ${
-                        isFocused
-                          ? 'bg-indigo-50/70 dark:bg-indigo-950/40'
-                          : 'hover:bg-slate-50 dark:hover:bg-slate-900/60'
-                      }`}
-                    >
-                      <td className="px-3 py-2.5">
-                        <p className="font-semibold text-slate-900 dark:text-white">
-                          {pred.assetName}
-                        </p>
-                        <p className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
-                          {pred.assetId}
-                        </p>
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <span
-                          className={`font-semibold ${
-                            pred.riskLevel === 'HIGH'
-                              ? 'text-red-600 dark:text-red-400'
-                              : pred.riskLevel === 'MEDIUM'
-                                ? 'text-amber-600 dark:text-amber-400'
-                                : 'text-emerald-600 dark:text-emerald-400'
-                          }`}
-                        >
-                          {pred.failureType.replace(/_/g, ' ')}
-                        </span>
-                        <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                          {pred.supportingEvidence[0]}
-                        </p>
-                      </td>
-                      <td className="px-3 py-2.5 text-right font-bold tabular-nums text-slate-900 dark:text-white">
-                        {pred.probabilityPct}%
-                      </td>
-                      <td className="px-3 py-2.5 text-right tabular-nums text-indigo-600 dark:text-indigo-400 font-semibold">
-                        {pred.confidenceScore}%
-                      </td>
-                      <td className="px-3 py-2.5 whitespace-nowrap font-mono text-slate-700 dark:text-slate-300">
-                        {pred.estimatedFailureWindow}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            focusAssetOnMap(pred.assetId);
-                          }}
-                          className="rounded border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 whitespace-nowrap shrink-0 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                        >
-                          Locate
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="lg:col-span-7">
+            <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+              <table className="w-full border-collapse text-left text-xs">
+                <thead className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+                  <tr>
+                    <th className="px-3 py-2.5">Asset</th>
+                    <th className="px-3 py-2.5">Failure Type</th>
+                    <th className="px-3 py-2.5 text-right">Prob.</th>
+                    <th className="px-3 py-2.5 text-right">Conf.</th>
+                    <th className="px-3 py-2.5">Window</th>
+                    <th className="px-3 py-2.5">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                  {predictions.map((pred) => {
+                    const isFocused = pred.assetId === focusedAssetId;
+                    return (
+                      <tr
+                        key={pred.id}
+                        onClick={() => selectAsset(pred.assetId, 'overview', { openPopup: false })}
+                        className={`cursor-pointer transition ${
+                          isFocused
+                            ? 'bg-indigo-50/70 dark:bg-indigo-950/40'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-900/60'
+                        }`}
+                      >
+                        <td className="px-3 py-2.5">
+                          <p className="font-semibold text-slate-900 dark:text-white">
+                            {pred.assetName}
+                          </p>
+                          <p className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                            {pred.assetId}
+                          </p>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <span
+                            className={`font-semibold ${
+                              pred.riskLevel === 'HIGH'
+                                ? 'text-red-600 dark:text-red-400'
+                                : pred.riskLevel === 'MEDIUM'
+                                  ? 'text-amber-600 dark:text-amber-400'
+                                  : 'text-emerald-600 dark:text-emerald-400'
+                            }`}
+                          >
+                            {pred.failureType.replace(/_/g, ' ')}
+                          </span>
+                          <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                            {pred.supportingEvidence[0]}
+                          </p>
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-bold tabular-nums text-slate-900 dark:text-white">
+                          {pred.probabilityPct}%
+                        </td>
+                        <td className="px-3 py-2.5 text-right tabular-nums text-indigo-600 dark:text-indigo-400 font-semibold">
+                          {pred.confidenceScore}%
+                        </td>
+                        <td className="px-3 py-2.5 whitespace-nowrap font-mono text-slate-700 dark:text-slate-300">
+                          {pred.estimatedFailureWindow}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              focusAssetOnMap(pred.assetId);
+                            }}
+                            className="rounded border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 whitespace-nowrap shrink-0 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                          >
+                            Locate
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <MobileRecordCardList
+              detailTitle="Failure Forecast Details"
+              onInspectAsset={(id) => focusAssetOnMap(id)}
+              items={predictions.map((pred) => {
+                const h = healthScores.find((s) => s.assetId === pred.assetId);
+                return {
+                  id: pred.id,
+                  assetName: pred.assetName,
+                  assetId: pred.assetId,
+                  status: `${pred.riskLevel} (${pred.probabilityPct}%)`,
+                  statusTone:
+                    pred.riskLevel === 'HIGH'
+                      ? 'critical'
+                      : pred.riskLevel === 'MEDIUM'
+                        ? 'warning'
+                        : 'healthy',
+                  health: h ? `${h.healthScore}/100` : `${pred.confidenceScore}% conf`,
+                  location: geoScopeLabel,
+                  lastUpdated: pred.estimatedFailureWindow,
+                  summary: `${pred.failureType.replace(/_/g, ' ')} — ${pred.supportingEvidence[0] || ''}`,
+                  detailFields: [
+                    { label: 'Failure Probability', value: `${pred.probabilityPct}%` },
+                    { label: 'Model Confidence', value: `${pred.confidenceScore}%` },
+                    { label: 'Forecast Window', value: pred.estimatedFailureWindow }
+                  ]
+                };
+              })}
+            />
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-950/40 lg:col-span-5">
@@ -651,62 +683,90 @@ export const PredictiveAnalyticsSection: React.FC = () => {
             ))}
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 lg:col-span-7">
-            <table className="w-full border-collapse text-left text-xs">
-              <thead className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:bg-slate-950 dark:text-slate-400">
-                <tr>
-                  <th className="px-3 py-2.5">Rank</th>
-                  <th className="px-3 py-2.5">Asset</th>
-                  <th className="px-3 py-2.5">Priority</th>
-                  <th className="px-3 py-2.5 text-right">Health</th>
-                  <th className="px-3 py-2.5 text-right">Fail Prob.</th>
-                  <th className="px-3 py-2.5 text-right">Customers</th>
-                  <th className="px-3 py-2.5">Window</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {maintenanceQueue.map((item, idx) => (
-                  <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/60">
-                    <td className="px-3 py-2.5 font-mono font-semibold text-slate-500 tabular-nums">
-                      #{idx + 1}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <p className="font-semibold text-slate-900 dark:text-white">
-                        {item.assetName}
-                      </p>
-                      <p className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
-                        {item.assetId} · {item.reasonSummary}
-                      </p>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <span
-                        className={`font-semibold ${
-                          item.priority === 'CRITICAL'
-                            ? 'text-red-600 dark:text-red-400'
-                            : item.priority === 'HIGH'
-                              ? 'text-amber-600 dark:text-amber-400'
-                              : 'text-sky-600 dark:text-sky-400'
-                        }`}
-                      >
-                        {item.priority}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-right font-semibold tabular-nums">
-                      {item.healthScore}
-                    </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-red-600 dark:text-red-400 font-semibold">
-                      {item.failureProbabilityPct}%
-                    </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-slate-700 dark:text-slate-300">
-                      {item.customerImpactCount ?? 'N/A'}
-                    </td>
-                    <td className="px-3 py-2.5 whitespace-nowrap font-mono text-slate-600 dark:text-slate-300">
-                      {item.recommendedWindow}
-                    </td>
+          <div className="lg:col-span-7">
+            <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+              <table className="w-full border-collapse text-left text-xs">
+                <thead className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+                  <tr>
+                    <th className="px-3 py-2.5">Rank</th>
+                    <th className="px-3 py-2.5">Asset</th>
+                    <th className="px-3 py-2.5">Priority</th>
+                    <th className="px-3 py-2.5 text-right">Health</th>
+                    <th className="px-3 py-2.5 text-right">Fail Prob.</th>
+                    <th className="px-3 py-2.5 text-right">Customers</th>
+                    <th className="px-3 py-2.5">Window</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                  {maintenanceQueue.map((item, idx) => (
+                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/60">
+                      <td className="px-3 py-2.5 font-mono font-semibold text-slate-500 tabular-nums">
+                        #{idx + 1}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <p className="font-semibold text-slate-900 dark:text-white">
+                          {item.assetName}
+                        </p>
+                        <p className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                          {item.assetId} · {item.reasonSummary}
+                        </p>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span
+                          className={`font-semibold ${
+                            item.priority === 'CRITICAL'
+                              ? 'text-red-600 dark:text-red-400'
+                              : item.priority === 'HIGH'
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-sky-600 dark:text-sky-400'
+                          }`}
+                        >
+                          {item.priority}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-semibold tabular-nums">
+                        {item.healthScore}
+                      </td>
+                      <td className="px-3 py-2.5 text-right tabular-nums text-red-600 dark:text-red-400 font-semibold">
+                        {item.failureProbabilityPct}%
+                      </td>
+                      <td className="px-3 py-2.5 text-right tabular-nums text-slate-700 dark:text-slate-300">
+                        {item.customerImpactCount ?? 'N/A'}
+                      </td>
+                      <td className="px-3 py-2.5 whitespace-nowrap font-mono text-slate-600 dark:text-slate-300">
+                        {item.recommendedWindow}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <MobileRecordCardList
+              detailTitle="Maintenance Queue Details"
+              onInspectAsset={(id) => focusAssetOnMap(id)}
+              items={maintenanceQueue.map((item, idx) => ({
+                id: item.id,
+                assetName: `#${idx + 1} · ${item.assetName}`,
+                assetId: item.assetId,
+                status: item.priority,
+                statusTone:
+                  item.priority === 'CRITICAL'
+                    ? 'critical'
+                    : item.priority === 'HIGH'
+                      ? 'warning'
+                      : 'info',
+                health: `${item.healthScore}/100`,
+                location: geoScopeLabel,
+                lastUpdated: item.recommendedWindow,
+                summary: item.reasonSummary,
+                detailFields: [
+                  { label: 'Failure Probability', value: `${item.failureProbabilityPct}%` },
+                  { label: 'Affected Customers', value: item.customerImpactCount ?? 'N/A' },
+                  { label: 'Recommended Window', value: item.recommendedWindow }
+                ]
+              }))}
+            />
           </div>
         </div>
       )}
